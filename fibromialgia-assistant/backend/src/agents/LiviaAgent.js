@@ -237,31 +237,32 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         // Garantir que sempre há um passo definido
         const currentStep = onboardingStatus.currentStep || "welcome";
 
-        // SOLUÇÃO DEFINITIVA ANTI-LOOP:
-        // Se currentStep é "welcome", significa que welcome foi enviado e está aguardando resposta
-        // Qualquer mensagem recebida quando currentStep é "welcome" é uma RESPOSTA ao welcome
-        // Portanto, SEMPRE processar como "name" (sem verificar mensagens anteriores)
-        const isWelcomeStep = currentStep === "welcome";
+        // SOLUÇÃO DEFINITIVA ANTI-LOOP: Detectar primeira mensagem pela mensagem em si
+        // Se a mensagem é um cumprimento genérico ("Oi", "Olá") E não há perfil, é primeira mensagem
+        // Caso contrário, é uma resposta ao onboarding
+        const normalizedMessage = message.trim().toLowerCase();
+        const isGenericGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|hey|hi)$/i.test(
+          normalizedMessage
+        );
+        const hasProfile = !!onboardingStatus.profile;
+        const isFirstMessage = isGenericGreeting && !hasProfile && currentStep === "welcome" && !onboardingStatus.error;
 
-        // Se currentStep é "welcome", é uma resposta ao welcome → processar como "name"
-        // Se currentStep NÃO é "welcome" e não é null, é uma resposta a outra pergunta → processar normalmente
-        // Se currentStep é null ou undefined, é primeira mensagem → enviar welcome
-        const isOnboardingResponse =
-          isWelcomeStep || (currentStep && currentStep !== "welcome");
+        // Se NÃO é primeira mensagem, é uma resposta ao onboarding
+        const isOnboardingResponse = !isFirstMessage;
 
         logger.info(
-          `[Livia] Processando onboarding. currentStep: ${currentStep}, isWelcomeStep: ${isWelcomeStep}, isOnboardingResponse: ${isOnboardingResponse}`
+          `[Livia] Processando onboarding. currentStep: ${currentStep}, isGenericGreeting: ${isGenericGreeting}, hasProfile: ${hasProfile}, isFirstMessage: ${isFirstMessage}, isOnboardingResponse: ${isOnboardingResponse}`
         );
 
         if (isOnboardingResponse) {
           // Determinar qual passo processar
           let stepToProcess = currentStep;
 
-          // CRITICAL: Se currentStep é "welcome", usuário está respondendo → SEMPRE processar como "name"
-          if (isWelcomeStep) {
+          // CRITICAL: Se currentStep é "welcome" mas NÃO é primeira mensagem, usuário está respondendo → SEMPRE processar como "name"
+          if (currentStep === "welcome" && !isFirstMessage) {
             stepToProcess = "name";
             logger.info(
-              `[Livia] ✅ ANTI-LOOP: currentStep='welcome' → processando como 'name' (usuário está respondendo ao welcome)`
+              `[Livia] ✅ ANTI-LOOP: currentStep='welcome' mas não é primeira mensagem → processando como 'name'`
             );
           }
 

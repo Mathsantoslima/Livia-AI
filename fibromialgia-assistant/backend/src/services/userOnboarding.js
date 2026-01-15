@@ -58,9 +58,10 @@ class UserOnboarding {
           "[Onboarding] Erro não crítico, assumindo que precisa de onboarding"
         );
         // Se houver erro mas não for "não encontrado", assumir que precisa de onboarding
+        // IMPORTANTE: Retornar currentStep como null para que o sistema detecte primeira mensagem pela mensagem em si
         return {
           needsOnboarding: true,
-          currentStep: "welcome",
+          currentStep: null, // null = não sabemos, deixar sistema detectar pela mensagem
           profile: null,
           isNewUser: true,
           error: error.message,
