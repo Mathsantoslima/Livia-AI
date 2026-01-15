@@ -95,13 +95,21 @@ router.post("/w-api", async (req, res) => {
       }
 
       // Log detalhado para áudio
-      if (messageData.msgContent?.audioMessage || messageData.type === "audio") {
+      if (
+        messageData.msgContent?.audioMessage ||
+        messageData.type === "audio"
+      ) {
         logger.info("[W-API Webhook] ÁUDIO DETECTADO:", {
           hasAudioMessage: !!messageData.msgContent?.audioMessage,
-          audioUrl: messageData.msgContent?.audioMessage?.url || messageData.audioUrl || messageData.mediaUrl,
+          audioUrl:
+            messageData.msgContent?.audioMessage?.url ||
+            messageData.audioUrl ||
+            messageData.mediaUrl,
           directPath: messageData.msgContent?.audioMessage?.directPath,
           type: messageData.type,
-          fullAudioMessage: JSON.stringify(messageData.msgContent?.audioMessage || {}).substring(0, 500),
+          fullAudioMessage: JSON.stringify(
+            messageData.msgContent?.audioMessage || {}
+          ).substring(0, 500),
         });
       }
 
@@ -366,7 +374,12 @@ router.get("/status", async (req, res) => {
           status: "success",
           data: {
             connection: isConnected ? "connected" : "disconnected",
-            phone: status.connectedPhone || status.phone || status.number || status.wid?.user || null,
+            phone:
+              status.connectedPhone ||
+              status.phone ||
+              status.number ||
+              status.wid?.user ||
+              null,
             state:
               status.status ||
               status.state ||

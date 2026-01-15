@@ -51,12 +51,16 @@ class UserOnboarding {
         };
       }
 
-      if (error) {
+      if (error && error.code !== "PGRST116") {
+        // Erro diferente de "não encontrado" - logar mas ainda tentar onboarding
         logger.error("[Onboarding] Erro ao buscar usuário:", error);
+        logger.warn("[Onboarding] Erro não crítico, assumindo que precisa de onboarding");
+        // Se houver erro mas não for "não encontrado", assumir que precisa de onboarding
         return {
-          needsOnboarding: false,
-          currentStep: null,
+          needsOnboarding: true,
+          currentStep: "welcome",
           profile: null,
+          isNewUser: true,
           error: error.message,
         };
       }

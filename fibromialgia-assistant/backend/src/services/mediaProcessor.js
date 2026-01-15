@@ -29,7 +29,9 @@ class MediaProcessor {
    */
   async processAudio(audioUrl, mimeType = "audio/ogg") {
     try {
-      logger.info(`[MediaProcessor] Processando áudio: ${audioUrl}, tipo: ${mimeType}`);
+      logger.info(
+        `[MediaProcessor] Processando áudio: ${audioUrl}, tipo: ${mimeType}`
+      );
 
       if (!audioUrl) {
         throw new Error("URL do áudio não fornecida");
@@ -44,7 +46,9 @@ class MediaProcessor {
       });
 
       const audioBuffer = Buffer.from(audioResponse.data);
-      logger.info(`[MediaProcessor] Áudio baixado: ${audioBuffer.length} bytes`);
+      logger.info(
+        `[MediaProcessor] Áudio baixado: ${audioBuffer.length} bytes`
+      );
 
       // Usar OpenAI Whisper para transcrição (melhor qualidade)
       if (this.openaiApiKey) {
@@ -57,8 +61,10 @@ class MediaProcessor {
           formData.append("model", "whisper-1");
           formData.append("language", "pt"); // Português
 
-          logger.info(`[MediaProcessor] Enviando áudio para OpenAI Whisper (${audioBuffer.length} bytes)`);
-          
+          logger.info(
+            `[MediaProcessor] Enviando áudio para OpenAI Whisper (${audioBuffer.length} bytes)`
+          );
+
           const response = await axios.post(
             "https://api.openai.com/v1/audio/transcriptions",
             formData,
@@ -73,7 +79,12 @@ class MediaProcessor {
           );
 
           const transcription = response.data.text || "";
-          logger.info(`[MediaProcessor] Transcrição concluída: ${transcription.substring(0, 100)}...`);
+          logger.info(
+            `[MediaProcessor] Transcrição concluída: ${transcription.substring(
+              0,
+              100
+            )}...`
+          );
 
           return {
             text: transcription,
@@ -381,7 +392,9 @@ ${text.substring(0, 10000)}`; // Limitar tamanho
    */
   async generateAudioFromText(text, language = "pt-BR") {
     try {
-      logger.info(`[MediaProcessor] Gerando áudio de ${text.length} caracteres`);
+      logger.info(
+        `[MediaProcessor] Gerando áudio de ${text.length} caracteres`
+      );
 
       // Usar OpenAI TTS (melhor qualidade)
       if (this.openaiApiKey) {
@@ -407,14 +420,16 @@ ${text.substring(0, 10000)}`; // Limitar tamanho
           // Converter buffer para base64 ou salvar temporariamente
           // Por enquanto, vamos retornar o buffer e o caller deve fazer upload
           const audioBuffer = Buffer.from(response.data);
-          
+
           // Upload para um serviço temporário ou retornar base64
           // Por simplicidade, vamos usar um serviço de upload temporário
           // Ou podemos salvar no Supabase Storage
           const base64Audio = audioBuffer.toString("base64");
           const dataUrl = `data:audio/mpeg;base64,${base64Audio}`;
 
-          logger.info(`[MediaProcessor] Áudio gerado com sucesso (${audioBuffer.length} bytes)`);
+          logger.info(
+            `[MediaProcessor] Áudio gerado com sucesso (${audioBuffer.length} bytes)`
+          );
 
           return {
             audioBuffer: audioBuffer,

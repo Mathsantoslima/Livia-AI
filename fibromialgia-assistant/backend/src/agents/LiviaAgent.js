@@ -203,25 +203,33 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         messagePreview: message ? message.substring(0, 50) : "vazio",
       });
 
-      if (onboardingStatus.needsOnboarding) {
+      // FORÇAR ONBOARDING se necessário - garantir que sempre execute
+      const shouldDoOnboarding = onboardingStatus.needsOnboarding || 
+                                 onboardingStatus.error || // Se houve erro, fazer onboarding
+                                 !onboardingStatus.profile; // Se não tem perfil, fazer onboarding
+      
+      if (shouldDoOnboarding) {
         logger.info(
-          `[Livia] Usuário ${normalizedUserId} precisa de onboarding. Passo: ${onboardingStatus.currentStep}`
+          `[Livia] Usuário ${normalizedUserId} precisa de onboarding. Passo: ${onboardingStatus.currentStep || "welcome"}, motivo: ${onboardingStatus.needsOnboarding ? "needsOnboarding=true" : onboardingStatus.error ? "erro na verificação" : "sem perfil"}`
         );
+        
+        // Garantir que sempre há um passo definido
+        const currentStep = onboardingStatus.currentStep || "welcome";
 
         // Se é mensagem de onboarding, processar resposta
         // Se não é a primeira mensagem (welcome), então é resposta de onboarding
         // Se é welcome, é a primeira mensagem - não processar como resposta ainda
-        const isOnboardingResponse = onboardingStatus.currentStep !== "welcome";
+        const isOnboardingResponse = currentStep !== "welcome";
 
         logger.info(
-          `[Livia] É resposta de onboarding? ${isOnboardingResponse}, passo atual: ${onboardingStatus.currentStep}`
+          `[Livia] É resposta de onboarding? ${isOnboardingResponse}, passo atual: ${currentStep}`
         );
 
         if (isOnboardingResponse) {
           // Atualizar perfil com a resposta
           await userOnboarding.updateUserProfile(
             normalizedUserId,
-            onboardingStatus.currentStep,
+            currentStep,
             message
           );
 
@@ -308,7 +316,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           );
 
           const welcomeMessage = userOnboarding.getOnboardingQuestion(
-            onboardingStatus.currentStep,
+            currentStep,
             onboardingStatus.profile?.name,
             onboardingStatus.profile?.nickname
           );
@@ -331,7 +339,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             text: welcomeMessage,
             chunks: [welcomeMessage],
             type: "onboarding",
-            onboardingStep: onboardingStatus.currentStep,
+            onboardingStep: currentStep,
           };
         }
       }

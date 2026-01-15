@@ -9,6 +9,7 @@ O sistema agora **OUVE** (detecta), **TRANSCREVE** (converte para texto) e **RES
 ## 📊 Fluxo Completo de Áudio
 
 ### 1. **Detecção de Áudio** 👂
+
 ```
 Webhook W-API recebe mensagem
     ↓
@@ -22,6 +23,7 @@ Log: "Áudio detectado: URL=..."
 ```
 
 ### 2. **Transcrição de Áudio** 🎤 → 📝
+
 ```
 MediaProcessor.processAudio()
     ↓
@@ -37,6 +39,7 @@ Retorna: { text, language, provider }
 ```
 
 ### 3. **Processamento da Mensagem** 🧠
+
 ```
 WhatsAppChannel.handleIncomingMessage()
     ↓
@@ -54,6 +57,7 @@ Gera resposta
 ```
 
 ### 4. **Resposta** 💬
+
 ```
 WhatsAppChannel.sendResponse()
     ↓
@@ -67,6 +71,7 @@ Envia resposta em texto
 ## 🔍 Melhorias Implementadas
 
 ### 1. **Detecção Robusta de Áudio** ✅
+
 - Busca URL em múltiplos campos:
   - `msgContent.audioMessage.url`
   - `msgContent.audioMessage.directPath`
@@ -76,6 +81,7 @@ Envia resposta em texto
 - Logs detalhados para debug
 
 ### 2. **Transcrição Confiável** ✅
+
 - Usa OpenAI Whisper (melhor qualidade)
 - Timeout aumentado para 120s (áudios maiores)
 - Suporte a até 50MB
@@ -83,16 +89,19 @@ Envia resposta em texto
 - Retry automático se falhar
 
 ### 3. **Validação e Retry** ✅
+
 - Se áudio não foi transcrito, tenta novamente
 - Garante que sempre há conteúdo processado
 - Mensagem de erro amigável se falhar completamente
 
 ### 4. **Onboarding Funciona com Áudio** ✅
+
 - Verifica onboarding mesmo quando há áudio
 - Usa transcrição para processar respostas de onboarding
 - Logs mostram tipo de mídia e conteúdo processado
 
 ### 5. **Logs Detalhados** ✅
+
 - Cada etapa é logada
 - Fácil identificar onde está falhando
 - Informações de URL, tamanho, transcrição
@@ -102,18 +111,22 @@ Envia resposta em texto
 ## 🐛 Correções Aplicadas
 
 ### Problema 1: Áudio não era detectado
+
 **Causa:** URL do áudio em campo diferente do esperado
 **Solução:** ✅ Busca em múltiplos campos possíveis
 
 ### Problema 2: Áudio não era transcrito
+
 **Causa:** Timeout muito curto ou URL inválida
 **Solução:** ✅ Timeout aumentado, validação de URL, retry
 
 ### Problema 3: Onboarding não funcionava com áudio
+
 **Causa:** processedContent vazio bloqueava processamento
 **Solução:** ✅ Garantir que sempre há conteúdo, mesmo se áudio falhar
 
 ### Problema 4: Falta de logs
+
 **Causa:** Poucos logs para debug
 **Solução:** ✅ Logs detalhados em cada etapa
 
@@ -140,11 +153,13 @@ Envia resposta em texto
 ## ⚙️ Configuração Necessária
 
 ### Variáveis de Ambiente:
+
 ```env
 OPENAI_API_KEY=sk-...  # Obrigatório para transcrição
 ```
 
 ### W-API:
+
 - Webhook configurado para enviar eventos de mensagem
 - URL do webhook: `https://seu-dominio.com/webhook/w-api`
 
@@ -166,11 +181,13 @@ OPENAI_API_KEY=sk-...  # Obrigatório para transcrição
 ## 🔮 Próximos Passos (Opcional)
 
 1. **Resposta em Áudio:**
+
    - Gerar áudio da resposta usando TTS
    - Enviar áudio via W-API
    - Responder no mesmo formato que o usuário enviou
 
 2. **Fallback para Google:**
+
    - Implementar Google Speech-to-Text como fallback
    - Se OpenAI falhar, tentar Google
 
@@ -183,6 +200,7 @@ OPENAI_API_KEY=sk-...  # Obrigatório para transcrição
 ## ✅ Teste
 
 Para testar:
+
 1. Envie um áudio para o WhatsApp
 2. Verifique os logs do Vercel
 3. Confirme que:

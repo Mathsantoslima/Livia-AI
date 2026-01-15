@@ -45,9 +45,11 @@ class WhatsAppChannel {
 
       // Converter telefone para userId
       const userId = this._phoneToUserId(from);
-      
+
       logger.info(
-        `[WhatsApp] Mensagem recebida de ${from}. Tipo: ${mediaType || "texto"}, URL: ${mediaUrl || "N/A"}`
+        `[WhatsApp] Mensagem recebida de ${from}. Tipo: ${
+          mediaType || "texto"
+        }, URL: ${mediaUrl || "N/A"}`
       );
 
       let processedContent = body || "";
@@ -143,7 +145,9 @@ class WhatsAppChannel {
         // Tentar processar novamente se houver URL
         if (mediaUrl) {
           try {
-            logger.info(`[WhatsApp] Tentando transcrever áudio novamente: ${mediaUrl}`);
+            logger.info(
+              `[WhatsApp] Tentando transcrever áudio novamente: ${mediaUrl}`
+            );
             const audioResult = await mediaProcessor.processAudio(
               mediaUrl,
               extracted.mimeType
@@ -155,7 +159,10 @@ class WhatsAppChannel {
               language: audioResult.language,
             };
             logger.info(
-              `[WhatsApp] Áudio transcrito na segunda tentativa: ${processedContent.substring(0, 50)}...`
+              `[WhatsApp] Áudio transcrito na segunda tentativa: ${processedContent.substring(
+                0,
+                50
+              )}...`
             );
           } catch (retryError) {
             logger.error(
@@ -181,13 +188,17 @@ class WhatsAppChannel {
 
       // Garantir que sempre há conteúdo para processar
       if (!processedContent) {
-        processedContent = originalMediaType === "audio"
-          ? "[Áudio recebido - aguardando transcrição]"
-          : "[Mídia recebida]";
+        processedContent =
+          originalMediaType === "audio"
+            ? "[Áudio recebido - aguardando transcrição]"
+            : "[Mídia recebida]";
       }
 
       logger.info(
-        `[WhatsApp] Conteúdo processado de ${from}: ${processedContent.substring(0, 100)}... (mídia: ${originalMediaType || "nenhuma"})`
+        `[WhatsApp] Conteúdo processado de ${from}: ${processedContent.substring(
+          0,
+          100
+        )}... (mídia: ${originalMediaType || "nenhuma"})`
       );
 
       logger.info(
@@ -378,16 +389,22 @@ class WhatsAppChannel {
             messageData.msgContent.audioMessage.media_key?.mediaUrl ||
             messageData.msgContent.audioMessage.mediaKey?.mediaUrl;
           mimeType =
-            messageData.msgContent.audioMessage.mimetype || 
+            messageData.msgContent.audioMessage.mimetype ||
             messageData.msgContent.audioMessage.mimeType ||
             "audio/ogg";
           body = messageData.msgContent.audioMessage.caption || "";
-          
-          logger.info(`[WhatsApp] Áudio detectado: URL=${mediaUrl || "NÃO ENCONTRADA"}, MIME=${mimeType}`);
-          
+
+          logger.info(
+            `[WhatsApp] Áudio detectado: URL=${
+              mediaUrl || "NÃO ENCONTRADA"
+            }, MIME=${mimeType}`
+          );
+
           // Se não encontrou URL, tentar buscar em outros lugares do objeto
           if (!mediaUrl) {
-            logger.warn("[WhatsApp] URL do áudio não encontrada em msgContent.audioMessage, tentando alternativas...");
+            logger.warn(
+              "[WhatsApp] URL do áudio não encontrada em msgContent.audioMessage, tentando alternativas..."
+            );
             // Tentar buscar no objeto raiz
             if (messageData.audioUrl) {
               mediaUrl = messageData.audioUrl;
@@ -396,7 +413,9 @@ class WhatsAppChannel {
             } else if (messageData.url && messageData.type === "audio") {
               mediaUrl = messageData.url;
             }
-            logger.info(`[WhatsApp] URL alternativa encontrada: ${mediaUrl || "NENHUMA"}`);
+            logger.info(
+              `[WhatsApp] URL alternativa encontrada: ${mediaUrl || "NENHUMA"}`
+            );
           }
         }
         // Imagem
