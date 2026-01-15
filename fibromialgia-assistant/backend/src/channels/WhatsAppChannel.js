@@ -142,11 +142,8 @@ class WhatsAppChannel {
       );
 
       // Verificar se é resposta de onboarding (verificar última mensagem do agente)
-      const userOnboarding = require("../services/userOnboarding");
-      const onboardingStatus = await userOnboarding.checkOnboardingStatus(
-        userId
-      );
-      const isOnboardingResponse = onboardingStatus.needsOnboarding;
+      // Não precisamos verificar aqui - o LiviaAgent já faz isso
+      // Apenas passar o userId normalizado
 
       // Processar com o agente (incluindo contexto de mídia)
       const response = await this.agent.processMessage(

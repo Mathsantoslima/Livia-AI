@@ -180,31 +180,59 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
    */
   async processMessage(userId, message, context = {}) {
     try {
+      // Normalizar userId (phone) - remover caracteres não numéricos
+      const normalizedUserId = userId.replace(/[^\d]/g, "");
+
+      logger.info(
+        `[Livia] Processando mensagem de userId: ${userId} (normalizado: ${normalizedUserId})`
+      );
+
       // PRIMEIRO: Verificar se o usuário precisa de onboarding
       const onboardingStatus = await userOnboarding.checkOnboardingStatus(
-        userId
+        normalizedUserId
       );
+
+      logger.info(`[Livia] Status de onboarding:`, {
+        needsOnboarding: onboardingStatus.needsOnboarding,
+        currentStep: onboardingStatus.currentStep,
+        isNewUser: onboardingStatus.isNewUser,
+      });
 
       if (onboardingStatus.needsOnboarding) {
         logger.info(
-          `[Livia] Usuário ${userId} precisa de onboarding. Passo: ${onboardingStatus.currentStep}`
+          `[Livia] Usuário ${normalizedUserId} precisa de onboarding. Passo: ${onboardingStatus.currentStep}`
         );
 
         // Se é mensagem de onboarding, processar resposta
-        if (context.isOnboardingResponse) {
+        // Se não é a primeira mensagem (welcome), então é resposta de onboarding
+        const isOnboardingResponse =
+          onboardingStatus.currentStep !== "welcome" ||
+          context.isOnboardingResponse;
+
+        logger.info(
+          `[Livia] É resposta de onboarding? ${isOnboardingResponse}, passo atual: ${onboardingStatus.currentStep}`
+        );
+
+        if (isOnboardingResponse) {
           // Atualizar perfil com a resposta
           await userOnboarding.updateUserProfile(
-            userId,
+            normalizedUserId,
             onboardingStatus.currentStep,
             message
           );
 
           // Verificar próximo passo
-          const nextStatus = await userOnboarding.checkOnboardingStatus(userId);
+          const nextStatus = await userOnboarding.checkOnboardingStatus(
+            normalizedUserId
+          );
 
           // Salvar resposta do usuário no histórico
           try {
-            await this._saveOnboardingMessage(userId, message, "user");
+            await this._saveOnboardingMessage(
+              normalizedUserId,
+              message,
+              "user"
+            );
           } catch (saveError) {
             logger.warn(
               "[Livia] Erro ao salvar resposta de onboarding:",
@@ -222,7 +250,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             // Salvar próxima pergunta no histórico
             try {
               await this._saveOnboardingMessage(
-                userId,
+                normalizedUserId,
                 nextQuestion,
                 "assistant"
               );
@@ -241,14 +269,14 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             };
           } else {
             // Onboarding completo
-            await userOnboarding.completeOnboarding(userId);
+            await userOnboarding.completeOnboarding(normalizedUserId);
             const completionMessage =
               userOnboarding.getOnboardingQuestion("symptoms");
 
             // Salvar mensagem de conclusão no histórico
             try {
               await this._saveOnboardingMessage(
-                userId,
+                normalizedUserId,
                 completionMessage,
                 "assistant"
               );
@@ -267,6 +295,10 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           }
         } else {
           // Primeira mensagem - iniciar onboarding
+          logger.info(
+            `[Livia] Iniciando onboarding para usuário ${normalizedUserId}`
+          );
+
           const welcomeMessage = userOnboarding.getOnboardingQuestion(
             onboardingStatus.currentStep,
             onboardingStatus.profile?.name || onboardingStatus.profile?.nickname
@@ -275,7 +307,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           // Salvar mensagem de onboarding no histórico
           try {
             await this._saveOnboardingMessage(
-              userId,
+              normalizedUserId,
               welcomeMessage,
               "assistant"
             );
@@ -297,11 +329,13 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
       // Usuário já tem perfil completo - processar normalmente
       // Carregar memória completa do usuário
-      const userMemory = await this.memoryManager.getUserMemory(userId);
+      const userMemory = await this.memoryManager.getUserMemory(
+        normalizedUserId
+      );
 
       // Carregar contexto de conversa (últimas mensagens)
       const conversationContext =
-        await this.memoryManager.getConversationContext(userId, 10);
+        await this.memoryManager.getConversationContext(normalizedUserId, 10);
 
       // Carregar memória global para contexto
       const globalMemory = await this.memoryManager.getGlobalMemory(5);
@@ -310,7 +344,9 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       const predictiveAnalysis = require("../services/predictiveAnalysis");
       let predictiveContext = null;
       try {
-        predictiveContext = await predictiveAnalysis.analyzeDay(userId);
+        predictiveContext = await predictiveAnalysis.analyzeDay(
+          normalizedUserId
+        );
       } catch (predError) {
         logger.warn(
           "[Livia] Erro ao carregar análise preditiva:",
@@ -333,7 +369,11 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       context.behavioralContext = this._buildBehavioralContext(userMemory);
 
       // Processar com o AgentBase (que já usa o contexto)
-      const response = await super.processMessage(userId, message, context);
+      const response = await super.processMessage(
+        normalizedUserId,
+        message,
+        context
+      );
 
       // Pós-processamento específico da Livia
       response.chunks = this._optimizeChunksForLivia(
@@ -441,18 +481,21 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
    */
   async _saveOnboardingMessage(userId, content, messageType) {
     try {
+      // Normalizar phone
+      const normalizedPhone = userId.replace(/[^\d]/g, "");
+
       // Buscar usuário para obter ID UUID
       const { data: user } = await supabase
         .from("users_livia")
         .select("id")
-        .eq("phone", userId)
+        .eq("phone", normalizedPhone)
         .single();
 
       const userUuid = user?.id || null;
 
       const { error } = await supabase.from("conversations_livia").insert({
         user_id: userUuid,
-        phone: userId,
+        phone: normalizedPhone,
         content: content,
         message_type: messageType,
         sent_at: new Date().toISOString(),

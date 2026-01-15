@@ -9,10 +9,12 @@ O banco de dados foi limpo para permitir que o onboarding funcione para todos os
 ## 🧹 O que foi limpo
 
 ### 1. **Conversas** ✅
+
 - ✅ Todas as conversas da tabela `conversations_livia` foram deletadas
 - ✅ Histórico de mensagens limpo
 
 ### 2. **Usuários Resetados** ✅
+
 - ✅ `onboarding_completed` marcado como `FALSE` para todos
 - ✅ `last_interaction` e `ultimo_contato` resetados
 - ✅ Campos de perfil limpos:
@@ -25,9 +27,11 @@ O banco de dados foi limpo para permitir que o onboarding funcione para todos os
   - `strategies_that_failed` → `[]`
 
 ### 3. **Padrões de Usuários** ✅
+
 - ✅ Todos os padrões da tabela `user_patterns` foram deletados
 
 ### 4. **Mantido (para aprendizado futuro)**
+
 - ⚠️ `collective_insights` - **MANTIDO** (insights coletivos podem ser úteis)
 - ⚠️ `global_patterns` - **MANTIDO** (padrões globais podem ser úteis)
 - ⚠️ `agent_metrics` - **MANTIDO** (métricas de performance)
@@ -57,10 +61,12 @@ Agora, quando qualquer usuário enviar uma mensagem:
 ## 🚀 Próximos Passos
 
 1. **Testar com um usuário novo:**
+
    - Enviar mensagem para o WhatsApp
    - Verificar se o onboarding inicia automaticamente
 
 2. **Testar com um usuário existente:**
+
    - Enviar mensagem para um número já cadastrado
    - Verificar se o onboarding reinicia
 
@@ -74,11 +80,13 @@ Agora, quando qualquer usuário enviar uma mensagem:
 ## ⚠️ Nota Importante
 
 **Dados deletados:**
+
 - ❌ Todas as conversas anteriores
 - ❌ Todos os padrões detectados
 - ❌ Perfis de usuários (resetados, mas dados básicos mantidos)
 
 **Dados mantidos:**
+
 - ✅ Estrutura das tabelas
 - ✅ Usuários (com dados básicos: phone, name, etc.)
 - ✅ Insights coletivos (para aprendizado futuro)
