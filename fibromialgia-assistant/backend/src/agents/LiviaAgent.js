@@ -181,11 +181,15 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
   async processMessage(userId, message, context = {}) {
     try {
       // PRIMEIRO: Verificar se o usuário precisa de onboarding
-      const onboardingStatus = await userOnboarding.checkOnboardingStatus(userId);
-      
+      const onboardingStatus = await userOnboarding.checkOnboardingStatus(
+        userId
+      );
+
       if (onboardingStatus.needsOnboarding) {
-        logger.info(`[Livia] Usuário ${userId} precisa de onboarding. Passo: ${onboardingStatus.currentStep}`);
-        
+        logger.info(
+          `[Livia] Usuário ${userId} precisa de onboarding. Passo: ${onboardingStatus.currentStep}`
+        );
+
         // Se é mensagem de onboarding, processar resposta
         if (context.isOnboardingResponse) {
           // Atualizar perfil com a resposta
@@ -194,15 +198,18 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             onboardingStatus.currentStep,
             message
           );
-          
+
           // Verificar próximo passo
           const nextStatus = await userOnboarding.checkOnboardingStatus(userId);
-          
+
           // Salvar resposta do usuário no histórico
           try {
             await this._saveOnboardingMessage(userId, message, "user");
           } catch (saveError) {
-            logger.warn("[Livia] Erro ao salvar resposta de onboarding:", saveError);
+            logger.warn(
+              "[Livia] Erro ao salvar resposta de onboarding:",
+              saveError
+            );
           }
 
           if (nextStatus.needsOnboarding) {
@@ -211,14 +218,21 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
               nextStatus.currentStep,
               nextStatus.profile?.name || nextStatus.profile?.nickname
             );
-            
+
             // Salvar próxima pergunta no histórico
             try {
-              await this._saveOnboardingMessage(userId, nextQuestion, "assistant");
+              await this._saveOnboardingMessage(
+                userId,
+                nextQuestion,
+                "assistant"
+              );
             } catch (saveError) {
-              logger.warn("[Livia] Erro ao salvar pergunta de onboarding:", saveError);
+              logger.warn(
+                "[Livia] Erro ao salvar pergunta de onboarding:",
+                saveError
+              );
             }
-            
+
             return {
               text: nextQuestion,
               chunks: [nextQuestion],
@@ -228,15 +242,23 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           } else {
             // Onboarding completo
             await userOnboarding.completeOnboarding(userId);
-            const completionMessage = userOnboarding.getOnboardingQuestion("symptoms");
-            
+            const completionMessage =
+              userOnboarding.getOnboardingQuestion("symptoms");
+
             // Salvar mensagem de conclusão no histórico
             try {
-              await this._saveOnboardingMessage(userId, completionMessage, "assistant");
+              await this._saveOnboardingMessage(
+                userId,
+                completionMessage,
+                "assistant"
+              );
             } catch (saveError) {
-              logger.warn("[Livia] Erro ao salvar conclusão de onboarding:", saveError);
+              logger.warn(
+                "[Livia] Erro ao salvar conclusão de onboarding:",
+                saveError
+              );
             }
-            
+
             return {
               text: completionMessage,
               chunks: [completionMessage],
@@ -249,14 +271,21 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             onboardingStatus.currentStep,
             onboardingStatus.profile?.name || onboardingStatus.profile?.nickname
           );
-          
+
           // Salvar mensagem de onboarding no histórico
           try {
-            await this._saveOnboardingMessage(userId, welcomeMessage, "assistant");
+            await this._saveOnboardingMessage(
+              userId,
+              welcomeMessage,
+              "assistant"
+            );
           } catch (saveError) {
-            logger.warn("[Livia] Erro ao salvar mensagem de onboarding:", saveError);
+            logger.warn(
+              "[Livia] Erro ao salvar mensagem de onboarding:",
+              saveError
+            );
           }
-          
+
           return {
             text: welcomeMessage,
             chunks: [welcomeMessage],
@@ -421,7 +450,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
       const userUuid = user?.id || null;
 
-      await supabase.from("conversations_livia").insert({
+      const { error } = await supabase.from("conversations_livia").insert({
         user_id: userUuid,
         phone: userId,
         content: content,
@@ -431,6 +460,10 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           type: "onboarding",
         },
       });
+
+      if (error) {
+        logger.warn("[Livia] Erro ao salvar mensagem de onboarding:", error);
+      }
     } catch (error) {
       logger.error("[Livia] Erro ao salvar mensagem de onboarding:", error);
     }

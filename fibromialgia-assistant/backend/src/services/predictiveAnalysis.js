@@ -101,7 +101,7 @@ class PredictiveAnalysis {
           .select("*")
           .eq("id", userId)
           .single();
-        
+
         if (!errorById && userById) {
           data = userById;
           error = null;

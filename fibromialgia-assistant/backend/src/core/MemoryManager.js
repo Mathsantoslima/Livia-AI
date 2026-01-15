@@ -45,7 +45,7 @@ class MemoryManager {
           .select("*")
           .eq("id", userId)
           .single();
-        
+
         if (!errorById && userById) {
           user = userById;
           error = null;
@@ -133,13 +133,13 @@ class MemoryManager {
       // Buscar usuário para obter ID UUID (se userId for phone)
       let userUuid = userId;
       let userPhone = userId;
-      
+
       const { data: user } = await supabase
         .from("users_livia")
         .select("id, phone")
         .or(`id.eq.${userId},phone.eq.${userId}`)
         .single();
-      
+
       if (user) {
         userUuid = user.id;
         userPhone = user.phone;

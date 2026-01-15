@@ -35,7 +35,8 @@ class WhatsAppChannel {
   async handleIncomingMessage(messageData) {
     try {
       const extracted = this._extractMessageData(messageData);
-      const { from, body, messageId, timestamp, mediaType, mediaUrl } = extracted;
+      const { from, body, messageId, timestamp, mediaType, mediaUrl } =
+        extracted;
 
       if (!from) {
         logger.warn("Mensagem inválida recebida do WhatsApp (sem remetente)");
@@ -67,7 +68,10 @@ class WhatsAppChannel {
               language: audioResult.language,
             };
             logger.info(
-              `[WhatsApp] Áudio transcrito: ${processedContent.substring(0, 50)}...`
+              `[WhatsApp] Áudio transcrito: ${processedContent.substring(
+                0,
+                50
+              )}...`
             );
           } else if (mediaType === "image") {
             const imageResult = await mediaProcessor.processImage(
@@ -139,19 +143,25 @@ class WhatsAppChannel {
 
       // Verificar se é resposta de onboarding (verificar última mensagem do agente)
       const userOnboarding = require("../services/userOnboarding");
-      const onboardingStatus = await userOnboarding.checkOnboardingStatus(userId);
+      const onboardingStatus = await userOnboarding.checkOnboardingStatus(
+        userId
+      );
       const isOnboardingResponse = onboardingStatus.needsOnboarding;
 
       // Processar com o agente (incluindo contexto de mídia)
-      const response = await this.agent.processMessage(userId, processedContent, {
-        channel: "whatsapp",
-        messageId,
-        timestamp,
-        mediaType,
-        mediaContext,
-        originalBody: body, // Manter texto original se houver
-        isOnboardingResponse: isOnboardingResponse, // Marcar se é resposta de onboarding
-      });
+      const response = await this.agent.processMessage(
+        userId,
+        processedContent,
+        {
+          channel: "whatsapp",
+          messageId,
+          timestamp,
+          mediaType,
+          mediaContext,
+          originalBody: body, // Manter texto original se houver
+          isOnboardingResponse: isOnboardingResponse, // Marcar se é resposta de onboarding
+        }
+      );
 
       // Enviar resposta
       await this.sendResponse(from, response);
@@ -288,7 +298,8 @@ class WhatsAppChannel {
           mediaUrl =
             messageData.msgContent.audioMessage.url ||
             messageData.msgContent.audioMessage.directPath;
-          mimeType = messageData.msgContent.audioMessage.mimetype || "audio/ogg";
+          mimeType =
+            messageData.msgContent.audioMessage.mimetype || "audio/ogg";
           body = messageData.msgContent.audioMessage.caption || "";
         }
         // Imagem
@@ -297,7 +308,8 @@ class WhatsAppChannel {
           mediaUrl =
             messageData.msgContent.imageMessage.url ||
             messageData.msgContent.imageMessage.directPath;
-          mimeType = messageData.msgContent.imageMessage.mimetype || "image/jpeg";
+          mimeType =
+            messageData.msgContent.imageMessage.mimetype || "image/jpeg";
           body = messageData.msgContent.imageMessage.caption || "";
         }
         // Vídeo (tratar como mídia, mas não processar por enquanto)
@@ -306,7 +318,8 @@ class WhatsAppChannel {
           mediaUrl =
             messageData.msgContent.videoMessage.url ||
             messageData.msgContent.videoMessage.directPath;
-          mimeType = messageData.msgContent.videoMessage.mimetype || "video/mp4";
+          mimeType =
+            messageData.msgContent.videoMessage.mimetype || "video/mp4";
           body = messageData.msgContent.videoMessage.caption || "";
         }
         // Documento
@@ -341,7 +354,15 @@ class WhatsAppChannel {
       const timestamp =
         messageData.moment || messageData.timestamp || Date.now();
 
-      return { from, body, messageId, timestamp, mediaType, mediaUrl, mimeType };
+      return {
+        from,
+        body,
+        messageId,
+        timestamp,
+        mediaType,
+        mediaUrl,
+        mimeType,
+      };
     }
 
     // Formato Baileys

@@ -2,7 +2,7 @@
  * =========================================
  * SERVIÇO DE ONBOARDING E MAPEAMENTO DE PERFIL
  * =========================================
- * 
+ *
  * Quando um usuário novo envia mensagem pela primeira vez,
  * o agente deve mapear e perguntar informações para criar o perfil completo
  */
@@ -86,11 +86,12 @@ class UserOnboarding {
     // Verificar campos essenciais
     const hasName = user.name || user.nickname;
     const hasBasicInfo = user.age || user.gender;
-    
+
     // Verificar se tem rotina básica ou hábitos
-    const hasRoutine = user.daily_routine && Object.keys(user.daily_routine).length > 0;
+    const hasRoutine =
+      user.daily_routine && Object.keys(user.daily_routine).length > 0;
     const hasHabits = user.habits && Object.keys(user.habits).length > 0;
-    
+
     // Verificar se onboarding foi marcado como completo
     const onboardingCompleted = user.onboarding_completed === true;
 
@@ -145,7 +146,9 @@ class UserOnboarding {
         case "name":
           if (answer) {
             // Tentar extrair nome (pode vir como "meu nome é João" ou só "João")
-            const nameMatch = answer.match(/(?:meu nome é|sou|me chamo|eu sou)\s+([A-Za-zÀ-ÿ\s]+)/i);
+            const nameMatch = answer.match(
+              /(?:meu nome é|sou|me chamo|eu sou)\s+([A-Za-zÀ-ÿ\s]+)/i
+            );
             const name = nameMatch ? nameMatch[1].trim() : answer.trim();
             updateData.name = name;
             updateData.nickname = name.split(" ")[0]; // Primeiro nome como nickname
@@ -158,12 +161,21 @@ class UserOnboarding {
           if (ageMatch) {
             updateData.age = parseInt(ageMatch[1]);
           }
-          
-          if (answer.toLowerCase().includes("mulher") || answer.toLowerCase().includes("feminino")) {
+
+          if (
+            answer.toLowerCase().includes("mulher") ||
+            answer.toLowerCase().includes("feminino")
+          ) {
             updateData.gender = "feminino";
-          } else if (answer.toLowerCase().includes("homem") || answer.toLowerCase().includes("masculino")) {
+          } else if (
+            answer.toLowerCase().includes("homem") ||
+            answer.toLowerCase().includes("masculino")
+          ) {
             updateData.gender = "masculino";
-          } else if (answer.toLowerCase().includes("outro") || answer.toLowerCase().includes("não binário")) {
+          } else if (
+            answer.toLowerCase().includes("outro") ||
+            answer.toLowerCase().includes("não binário")
+          ) {
             updateData.gender = "outro";
           }
           break;
@@ -171,7 +183,10 @@ class UserOnboarding {
         case "sleep_habits":
           updateData.habits = existingUser?.habits || {};
           const sleepData = this._extractSleepInfo(answer);
-          updateData.habits.sleep = { ...updateData.habits.sleep, ...sleepData };
+          updateData.habits.sleep = {
+            ...updateData.habits.sleep,
+            ...sleepData,
+          };
           break;
 
         case "work_habits":
@@ -183,7 +198,10 @@ class UserOnboarding {
         case "daily_routine":
           updateData.daily_routine = existingUser?.daily_routine || {};
           const routineData = this._extractRoutineInfo(answer);
-          updateData.daily_routine = { ...updateData.daily_routine, ...routineData };
+          updateData.daily_routine = {
+            ...updateData.daily_routine,
+            ...routineData,
+          };
           break;
 
         case "symptoms":
@@ -263,7 +281,7 @@ class UserOnboarding {
    */
   getOnboardingQuestion(step, userName = null) {
     const greetings = userName ? `Olá, ${userName}!` : "Olá!";
-    
+
     switch (step) {
       case "welcome":
         return `${greetings} 😊\n\nSou a Livia, sua assistente para ajudar com fibromialgia.\n\nAntes de começarmos, preciso conhecer você melhor para poder ajudar de forma personalizada.\n\nQual é o seu nome?`;
@@ -305,18 +323,31 @@ class UserOnboarding {
     }
 
     // Qualidade
-    if (lowerAnswer.includes("bom") || lowerAnswer.includes("boa") || lowerAnswer.includes("bem")) {
+    if (
+      lowerAnswer.includes("bom") ||
+      lowerAnswer.includes("boa") ||
+      lowerAnswer.includes("bem")
+    ) {
       info.quality = "good";
-    } else if (lowerAnswer.includes("ruim") || lowerAnswer.includes("péssimo")) {
+    } else if (
+      lowerAnswer.includes("ruim") ||
+      lowerAnswer.includes("péssimo")
+    ) {
       info.quality = "poor";
     } else {
       info.quality = "medium";
     }
 
     // Consistência
-    if (lowerAnswer.includes("sempre") || lowerAnswer.includes("todos os dias")) {
+    if (
+      lowerAnswer.includes("sempre") ||
+      lowerAnswer.includes("todos os dias")
+    ) {
       info.consistency = "high";
-    } else if (lowerAnswer.includes("às vezes") || lowerAnswer.includes("variável")) {
+    } else if (
+      lowerAnswer.includes("às vezes") ||
+      lowerAnswer.includes("variável")
+    ) {
       info.consistency = "low";
     } else {
       info.consistency = "medium";
@@ -348,7 +379,8 @@ class UserOnboarding {
     }
 
     // Pausas
-    info.breaks = lowerAnswer.includes("pausa") || lowerAnswer.includes("descanso");
+    info.breaks =
+      lowerAnswer.includes("pausa") || lowerAnswer.includes("descanso");
 
     return info;
   }
@@ -361,21 +393,32 @@ class UserOnboarding {
     const lowerAnswer = answer.toLowerCase();
 
     // Horário de acordar
-    const wakeMatch = answer.match(/(?:acordo|acordar|levanto)\s*(?:às|as)?\s*(\d{1,2})[h:]?(\d{2})?/i);
+    const wakeMatch = answer.match(
+      /(?:acordo|acordar|levanto)\s*(?:às|as)?\s*(\d{1,2})[h:]?(\d{2})?/i
+    );
     if (wakeMatch) {
-      routine.wakeTime = `${wakeMatch[1].padStart(2, "0")}:${wakeMatch[2] || "00"}`;
+      routine.wakeTime = `${wakeMatch[1].padStart(2, "0")}:${
+        wakeMatch[2] || "00"
+      }`;
     }
 
     // Horário de dormir
-    const sleepMatch = answer.match(/(?:durmo|dormir|vou dormir)\s*(?:às|as)?\s*(\d{1,2})[h:]?(\d{2})?/i);
+    const sleepMatch = answer.match(
+      /(?:durmo|dormir|vou dormir)\s*(?:às|as)?\s*(\d{1,2})[h:]?(\d{2})?/i
+    );
     if (sleepMatch) {
-      routine.bedtime = `${sleepMatch[1].padStart(2, "0")}:${sleepMatch[2] || "00"}`;
+      routine.bedtime = `${sleepMatch[1].padStart(2, "0")}:${
+        sleepMatch[2] || "00"
+      }`;
     }
 
     // Atividade física
     if (lowerAnswer.includes("caminhada") || lowerAnswer.includes("caminhar")) {
       routine.physicalActivity = { type: "walking", frequency: "daily" };
-    } else if (lowerAnswer.includes("academia") || lowerAnswer.includes("ginásio")) {
+    } else if (
+      lowerAnswer.includes("academia") ||
+      lowerAnswer.includes("ginásio")
+    ) {
       routine.physicalActivity = { type: "gym", frequency: "weekly" };
     } else if (lowerAnswer.includes("yoga")) {
       routine.physicalActivity = { type: "yoga", frequency: "weekly" };

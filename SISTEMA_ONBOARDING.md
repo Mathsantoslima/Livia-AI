@@ -9,7 +9,9 @@ O agente Livia agora **automaticamente detecta usuários novos** e faz o mapeame
 ## 🔄 Fluxo de Onboarding
 
 ### 1. **Detecção Automática**
+
 Quando um usuário envia a primeira mensagem:
+
 - ✅ Sistema verifica se o usuário existe no banco
 - ✅ Se não existe → inicia onboarding
 - ✅ Se existe mas perfil incompleto → continua onboarding
@@ -18,6 +20,7 @@ Quando um usuário envia a primeira mensagem:
 ### 2. **Passos do Onboarding**
 
 #### **Passo 1: Welcome + Nome**
+
 ```
 Olá! 😊
 
@@ -29,6 +32,7 @@ Qual é o seu nome?
 ```
 
 #### **Passo 2: Informações Básicas**
+
 ```
 Prazer em conhecê-lo(a)! 👋
 
@@ -38,6 +42,7 @@ Para personalizar melhor nossa conversa, me conte:
 ```
 
 #### **Passo 3: Hábitos de Sono**
+
 ```
 Entendi! Obrigada por compartilhar. 💙
 
@@ -47,6 +52,7 @@ Agora, me fale sobre seu sono:
 ```
 
 #### **Passo 4: Hábitos de Trabalho**
+
 ```
 Obrigada! 📝
 
@@ -56,6 +62,7 @@ E sobre seu trabalho:
 ```
 
 #### **Passo 5: Rotina Diária**
+
 ```
 Perfeito! ✨
 
@@ -65,6 +72,7 @@ Me conte sobre sua rotina diária:
 ```
 
 #### **Passo 6: Sintomas e Gatilhos**
+
 ```
 Ótimo! Já estou conhecendo você melhor. 🎯
 
@@ -74,6 +82,7 @@ Por último, me conte:
 ```
 
 #### **Passo 7: Conclusão**
+
 ```
 Perfeito! Agora já tenho um perfil completo sobre você. 🎉
 
@@ -92,28 +101,34 @@ Pode me contar como você está se sentindo hoje?
 O sistema **extrai automaticamente** informações das respostas do usuário:
 
 ### **Nome**
+
 - Extrai de: "meu nome é João", "sou Maria", "me chamo Pedro"
 - Salva: `name` e `nickname` (primeiro nome)
 
 ### **Idade e Gênero**
+
 - Extrai idade de: "tenho 35 anos", "35 anos"
 - Extrai gênero de: "mulher", "homem", "feminino", "masculino"
 
 ### **Sono**
+
 - Extrai horas: "dormo 7 horas", "7h por noite"
 - Extrai qualidade: "bom", "médio", "ruim"
 - Extrai consistência: "sempre", "às vezes", "variável"
 
 ### **Trabalho**
+
 - Extrai horas: "trabalho 8 horas", "8h por dia"
 - Extrai estresse: "alto", "médio", "baixo"
 - Detecta pausas: "faço pausas", "tenho descanso"
 
 ### **Rotina**
+
 - Extrai horários: "acordo às 7h", "durmo às 22h"
 - Detecta atividade física: "caminhada", "academia", "yoga"
 
 ### **Sintomas**
+
 - Detecta automaticamente: dor, fadiga, sono, ansiedade, depressão, rigidez, memória
 
 ---
@@ -121,6 +136,7 @@ O sistema **extrai automaticamente** informações das respostas do usuário:
 ## 💾 Armazenamento
 
 Todas as informações são salvas em:
+
 - ✅ `users_livia` - Dados do usuário
 - ✅ `conversations_livia` - Histórico de onboarding
 - ✅ Campos JSONB para rotina, hábitos e perfil comportamental
@@ -130,6 +146,7 @@ Todas as informações são salvas em:
 ## 🎯 Prioridade
 
 **O onboarding tem PRIORIDADE MÁXIMA:**
+
 - ✅ Verificado **ANTES** de processar qualquer mensagem
 - ✅ Se usuário precisa de onboarding → **só faz onboarding**
 - ✅ Só processa mensagens normais quando perfil está completo
@@ -139,6 +156,7 @@ Todas as informações são salvas em:
 ## 🔍 Verificação de Perfil Completo
 
 Um perfil é considerado completo quando tem:
+
 - ✅ Nome (name ou nickname)
 - ✅ Rotina básica OU hábitos
 - ✅ `onboarding_completed = true`
@@ -150,6 +168,7 @@ Um perfil é considerado completo quando tem:
 **Usuário novo envia:** "Oi"
 
 **Livia responde:**
+
 ```
 Olá! 😊
 
@@ -163,6 +182,7 @@ Qual é o seu nome?
 **Usuário responde:** "Meu nome é Maria"
 
 **Livia responde:**
+
 ```
 Prazer em conhecê-la, Maria! 👋
 
