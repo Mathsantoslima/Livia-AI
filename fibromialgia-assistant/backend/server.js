@@ -69,7 +69,8 @@ try {
       res.status(500).json({
         status: "error",
         message: "Erro ao inicializar rotas",
-        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     });
   }
@@ -97,12 +98,13 @@ try {
         error: {
           code: 500,
           message: "Erro interno do servidor",
-          ...(process.env.NODE_ENV === "development" && { details: err.message }),
+          ...(process.env.NODE_ENV === "development" && {
+            details: err.message,
+          }),
         },
       });
     });
   }
-
 } catch (error) {
   console.error("❌ Erro fatal ao inicializar servidor:", error);
   // Criar app mínimo para não quebrar completamente
@@ -114,7 +116,9 @@ try {
       error: {
         code: 500,
         message: "Erro ao inicializar servidor",
-        ...(process.env.NODE_ENV === "development" && { details: error.message }),
+        ...(process.env.NODE_ENV === "development" && {
+          details: error.message,
+        }),
       },
     });
   });
@@ -129,7 +133,7 @@ if (require.main === module && app) {
     const { config } = require("./src/config");
     const logger = require("./src/utils/logger");
     const port = config.port || 3000;
-    
+
     const server = app.listen(port, () => {
       logger.info(`Servidor iniciado em http://localhost:${port}`);
       logger.info(`Ambiente: ${config.nodeEnv}`);
