@@ -20,6 +20,20 @@ const WhatsAppChannel = require("../channels/WhatsAppChannel");
 router.post("/whatsapp", webhookController.handleWhatsAppWebhook);
 
 /**
+ * GET /webhook/w-api
+ * Verifica se o endpoint está funcionando (para teste)
+ */
+router.get("/w-api", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "Webhook W-API endpoint está funcionando",
+    method: "Use POST para enviar mensagens",
+    endpoint: "/webhook/w-api",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
  * POST /webhook/w-api
  * Recebe webhooks da W-API
  */
