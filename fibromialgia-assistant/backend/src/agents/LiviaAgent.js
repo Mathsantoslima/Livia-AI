@@ -237,28 +237,34 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         // Garantir que sempre há um passo definido
         const currentStep = onboardingStatus.currentStep || "welcome";
 
-        // SOLUÇÃO DEFINITIVA: Usar onboarding_step do banco como fonte de verdade única
+        // SOLUÇÃO DEFINITIVA ANTI-LOOP:
         // Se currentStep é "welcome", significa que welcome foi enviado e está aguardando resposta
         // Qualquer mensagem recebida quando currentStep é "welcome" é uma RESPOSTA ao welcome
-        // Portanto, sempre processar como "name"
+        // Portanto, SEMPRE processar como "name" (sem verificar mensagens anteriores)
         const isWelcomeStep = currentStep === "welcome";
-        const isOnboardingResponse = isWelcomeStep || currentStep !== "welcome";
+        
+        // Se currentStep é "welcome", é uma resposta ao welcome → processar como "name"
+        // Se currentStep NÃO é "welcome" e não é null, é uma resposta a outra pergunta → processar normalmente
+        const isOnboardingResponse = isWelcomeStep || (currentStep !== "welcome" && currentStep !== null);
 
         logger.info(
           `[Livia] Processando onboarding. currentStep: ${currentStep}, isWelcomeStep: ${isWelcomeStep}, isOnboardingResponse: ${isOnboardingResponse}`
         );
 
-        if (isOnboardingResponse && isWelcomeStep) {
-          // Usuário está respondendo ao welcome → SEMPRE processar como "name"
-          // Isso elimina completamente o loop porque não há ambiguidade
-          const stepToProcess = "name";
+        if (isOnboardingResponse) {
+          // Determinar qual passo processar
+          let stepToProcess = currentStep;
+          
+          // CRITICAL: Se currentStep é "welcome", usuário está respondendo → SEMPRE processar como "name"
+          if (isWelcomeStep) {
+            stepToProcess = "name";
+            logger.info(
+              `[Livia] ✅ ANTI-LOOP: currentStep='welcome' → processando como 'name' (usuário está respondendo ao welcome)`
+            );
+          }
 
           logger.info(
-            `[Livia] ✅ currentStep é 'welcome' → usuário está respondendo. Processando como 'name' (SEM LOOP).`
-          );
-
-          logger.info(
-            `[Livia] Processando resposta do passo: ${stepToProcess} (currentStep era: ${currentStep}, hasPreviousConversation: ${hasPreviousConversation})`
+            `[Livia] Processando resposta do passo: ${stepToProcess} (currentStep era: ${currentStep})`
           );
 
           // Atualizar perfil com a resposta
