@@ -141,11 +141,12 @@ class WhatsAppChannel {
         )}...`
       );
 
-      // Verificar se é resposta de onboarding (verificar última mensagem do agente)
-      // Não precisamos verificar aqui - o LiviaAgent já faz isso
-      // Apenas passar o userId normalizado
+      logger.info(
+        `[WhatsApp] Processando mensagem com agente. userId: ${userId}, conteúdo: ${processedContent.substring(0, 50)}...`
+      );
 
       // Processar com o agente (incluindo contexto de mídia)
+      // O LiviaAgent já verifica onboarding internamente
       const response = await this.agent.processMessage(
         userId,
         processedContent,
@@ -156,9 +157,17 @@ class WhatsAppChannel {
           mediaType,
           mediaContext,
           originalBody: body, // Manter texto original se houver
-          isOnboardingResponse: isOnboardingResponse, // Marcar se é resposta de onboarding
         }
       );
+
+      logger.info(
+        `[WhatsApp] Resposta recebida do agente: ${response?.text?.substring(0, 50) || "sem texto"}...`
+      );
+
+      if (!response || !response.text) {
+        logger.error("[WhatsApp] Resposta do agente está vazia ou inválida:", response);
+        throw new Error("Resposta do agente está vazia");
+      }
 
       // Enviar resposta
       await this.sendResponse(from, response);

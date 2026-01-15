@@ -9,11 +9,13 @@ O onboarding agora pergunta separadamente o **nome** e o **apelido** (como o usu
 ## 📝 Fluxo do Onboarding
 
 ### 1. **Passo "welcome"** (Primeira mensagem)
+
 - Livia se apresenta completamente
 - Explica funcionalidades
 - **Pergunta:** "Qual é o seu nome?"
 
 ### 2. **Passo "name"** (Nome completo)
+
 - **Pergunta:** "Prazer em conhecê-lo(a)! 👋\n\nE como você prefere ser chamado(a)? (pode ser um apelido, diminutivo ou o próprio nome)"
 - Extrai o nome de diferentes formatos:
   - "meu nome é João"
@@ -22,6 +24,7 @@ O onboarding agora pergunta separadamente o **nome** e o **apelido** (como o usu
   - "João" (resposta direta)
 
 ### 3. **Passo "nickname"** (Apelido/Preferência)
+
 - **Pergunta:** "Perfeito! Vou te chamar assim então. 😊\n\nPara personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?"
 - Extrai o apelido de diferentes formatos:
   - "me chame de João"
@@ -31,6 +34,7 @@ O onboarding agora pergunta separadamente o **nome** e o **apelido** (como o usu
   - "João" (resposta direta)
 
 ### 4. **Passos seguintes**
+
 - Continua normalmente com idade, gênero, sono, trabalho, rotina, sintomas
 
 ---
@@ -38,10 +42,12 @@ O onboarding agora pergunta separadamente o **nome** e o **apelido** (como o usu
 ## 💾 Armazenamento no Banco
 
 ### Campos Salvos:
+
 - **`name`**: Nome completo do usuário
 - **`nickname`**: Apelido/preferência de como ser chamado
 
 ### Exemplo:
+
 ```json
 {
   "name": "Maria da Silva",
@@ -54,6 +60,7 @@ O onboarding agora pergunta separadamente o **nome** e o **apelido** (como o usu
 ## 🎯 Uso no Contexto
 
 ### Prioridade de Uso:
+
 1. **`nickname`** (se disponível) - **PRIORIDADE**
 2. **`name`** (se nickname não disponível)
 3. **"querido(a)"** (fallback genérico)
@@ -61,10 +68,12 @@ O onboarding agora pergunta separadamente o **nome** e o **apelido** (como o usu
 ### Onde é Usado:
 
 1. **MemoryManager** (`getUserMemory`)
+
    - Retorna `name` e `nickname` separadamente
    - Não faz fallback automático
 
 2. **AgentBase** (`_buildSystemPrompt`)
+
    - Inclui no prompt:
      ```
      - Nome: Maria da Silva
@@ -72,6 +81,7 @@ O onboarding agora pergunta separadamente o **nome** e o **apelido** (como o usu
      ```
 
 3. **LiviaAgent** (`generateDailyCheckIn`)
+
    - Usa `nickname` como prioridade:
      ```javascript
      const name = userMemory.nickname || userMemory.name || "querido(a)";
@@ -86,10 +96,12 @@ O onboarding agora pergunta separadamente o **nome** e o **apelido** (como o usu
 ## 🔍 Extração de Dados
 
 ### Nome (case "name"):
+
 - Regex: `/(?:meu nome é|sou|me chamo|eu sou)\s+([A-Za-zÀ-ÿ\s]+)/i`
 - Aceita: "meu nome é João", "sou Maria", "me chamo Pedro", "João"
 
 ### Apelido (case "nickname"):
+
 - Regex: `/(?:me chame de|chame de|pode me chamar de|prefiro|gosto de ser chamado|apelido)\s+([A-Za-zÀ-ÿ\s]+)/i`
 - Aceita: "me chame de Mari", "chame de João", "prefiro ser chamado de Ana", "Mari"
 
@@ -134,16 +146,19 @@ Livia usa `nickname` nas conversas
 ## 🎯 Exemplo de Uso
 
 ### Cenário 1: Usuário fornece nome e apelido
+
 - **Nome:** "Maria da Silva"
 - **Apelido:** "Mari"
 - **Livia chama:** "Mari" ✅
 
 ### Cenário 2: Usuário fornece só nome
+
 - **Nome:** "João"
 - **Apelido:** null
 - **Livia chama:** "João" ✅
 
 ### Cenário 3: Usuário não completa onboarding
+
 - **Nome:** null
 - **Apelido:** null
 - **Livia chama:** "querido(a)" ✅
