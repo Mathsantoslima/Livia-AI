@@ -38,7 +38,7 @@ class LiviaAgent extends AgentBase {
         },
         claude: {
           apiKey: process.env.CLAUDE_API_KEY,
-          model: process.env.CLAUDE_MODEL || "claude-3-sonnet-20240229",
+          model: process.env.CLAUDE_MODEL || "claude-sonnet-4-5-2025092",
         },
       },
 
@@ -279,7 +279,10 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           // Atualizar perfil com a resposta
           try {
             logger.info(
-              `[Livia] Chamando updateUserProfile para ${normalizedUserId}, passo: ${stepToProcess}, resposta: ${message.substring(0, 50)}...`
+              `[Livia] Chamando updateUserProfile para ${normalizedUserId}, passo: ${stepToProcess}, resposta: ${message.substring(
+                0,
+                50
+              )}...`
             );
             await userOnboarding.updateUserProfile(
               normalizedUserId,
@@ -320,7 +323,8 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             // Se falhar, assumir que ainda precisa onboarding e continuar no mesmo passo
             nextStatus = {
               needsOnboarding: true,
-              currentStep: stepToProcess === "name" ? "nickname" : stepToProcess,
+              currentStep:
+                stepToProcess === "name" ? "nickname" : stepToProcess,
               profile: onboardingStatus.profile,
             };
           }

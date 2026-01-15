@@ -13,7 +13,7 @@ class ClaudeProvider extends BaseProvider {
     super({
       name: "Claude",
       apiKey: config.apiKey || process.env.CLAUDE_API_KEY,
-      model: config.model || process.env.CLAUDE_MODEL || "claude-3-sonnet-20240229",
+      model: config.model || process.env.CLAUDE_MODEL || "claude-sonnet-4-5-2025092",
       ...config,
     });
 

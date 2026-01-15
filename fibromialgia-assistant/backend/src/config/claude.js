@@ -18,7 +18,7 @@ if (process.env.CLAUDE_API_KEY) {
   // Testa conexão (usando modelo válido) - não bloqueia se falhar
   claude
     .post("/messages", {
-      model: process.env.CLAUDE_MODEL || "claude-3-sonnet-20240229",
+      model: process.env.CLAUDE_MODEL || "claude-sonnet-4-5-2025092",
       max_tokens: 1,
       messages: [{ role: "user", content: "test" }],
     })
