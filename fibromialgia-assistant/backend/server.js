@@ -53,7 +53,23 @@ try {
     app.use("/webhook", webhookRoutes);
     app.use("/", apiRoutes);
 
-    // Rota de saúde/healthcheck (deve vir antes do handler 404)
+    // Rota raiz
+    app.get("/", (req, res) => {
+      res.status(200).json({
+        name: "Fibro.IA - Assistente Livia",
+        status: "online",
+        version: process.env.npm_package_version || "1.0.0",
+        environment: config.nodeEnv,
+        timestamp: new Date().toISOString(),
+        endpoints: {
+          health: "/health",
+          api: "/api",
+          webhook: "/webhook",
+        },
+      });
+    });
+
+    // Rota de saúde/healthcheck
     app.get("/health", (req, res) => {
       res.status(200).json({
         status: "online",
