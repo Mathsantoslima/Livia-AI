@@ -238,25 +238,42 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         const currentStep = onboardingStatus.currentStep || "welcome";
 
         // Se é mensagem de onboarding, processar resposta
-        // Se não é a primeira mensagem (welcome), então é resposta de onboarding
-        // Se é welcome, é a primeira mensagem - não processar como resposta ainda
-        const isOnboardingResponse = currentStep !== "welcome";
+        // Se currentStep é "welcome", significa que é a primeira mensagem - enviar welcome
+        // Se currentStep NÃO é "welcome", significa que o usuário está respondendo a uma pergunta
+        // IMPORTANTE: Se currentStep é "welcome" mas o usuário já tem perfil (mesmo que incompleto),
+        // significa que ele está respondendo após o welcome, então tratar como resposta do passo "name"
+        const isFirstMessage = currentStep === "welcome" && !onboardingStatus.profile;
+        const isOnboardingResponse = !isFirstMessage;
 
         logger.info(
-          `[Livia] É resposta de onboarding? ${isOnboardingResponse}, passo atual: ${currentStep}`
+          `[Livia] É resposta de onboarding? ${isOnboardingResponse}, passo atual: ${currentStep}, é primeira mensagem: ${isFirstMessage}, tem perfil: ${!!onboardingStatus.profile}`
         );
 
         if (isOnboardingResponse) {
+          // Determinar qual passo processar
+          // Se currentStep é "welcome" mas tem perfil, significa que está respondendo após welcome → processar como "name"
+          const stepToProcess = currentStep === "welcome" && onboardingStatus.profile 
+            ? "name" 
+            : currentStep;
+          
+          logger.info(
+            `[Livia] Processando resposta do passo: ${stepToProcess} (currentStep era: ${currentStep})`
+          );
+
           // Atualizar perfil com a resposta
           await userOnboarding.updateUserProfile(
             normalizedUserId,
-            currentStep,
+            stepToProcess,
             message
           );
 
           // Verificar próximo passo
           const nextStatus = await userOnboarding.checkOnboardingStatus(
             normalizedUserId
+          );
+          
+          logger.info(
+            `[Livia] Após atualizar perfil, próximo passo: ${nextStatus.currentStep}, ainda precisa onboarding: ${nextStatus.needsOnboarding}`
           );
 
           // Salvar resposta do usuário no histórico

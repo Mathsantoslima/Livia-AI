@@ -59,9 +59,11 @@ class WhatsAppChannel {
       // Processar mídia se presente
       if (mediaType) {
         logger.info(
-          `[WhatsApp] ✅ MÍDIA DETECTADA: tipo=${mediaType}, URL=${mediaUrl || "NÃO ENCONTRADA"}, MIME=${extracted.mimeType || "N/A"}`
+          `[WhatsApp] ✅ MÍDIA DETECTADA: tipo=${mediaType}, URL=${
+            mediaUrl || "NÃO ENCONTRADA"
+          }, MIME=${extracted.mimeType || "N/A"}`
         );
-        
+
         if (mediaUrl) {
           try {
             logger.info(
@@ -131,10 +133,7 @@ class WhatsAppChannel {
               `[WhatsApp] ❌ ERRO ao processar mídia ${mediaType}:`,
               mediaError
             );
-            logger.error(
-              `[WhatsApp] Stack trace:`,
-              mediaError.stack
-            );
+            logger.error(`[WhatsApp] Stack trace:`, mediaError.stack);
             // Continuar com texto se houver, ou enviar mensagem de erro
             if (!processedContent) {
               processedContent =
@@ -146,7 +145,9 @@ class WhatsAppChannel {
             `[WhatsApp] ⚠️ Mídia ${mediaType} detectada mas sem URL. Tentando processar com informações disponíveis.`
           );
           // Mesmo sem URL, podemos tentar processar se houver outras informações
-          processedContent = body || `Recebi uma ${mediaType}, mas não consegui acessá-la. Pode descrever o que enviou?`;
+          processedContent =
+            body ||
+            `Recebi uma ${mediaType}, mas não consegui acessá-la. Pode descrever o que enviou?`;
         }
       }
 
