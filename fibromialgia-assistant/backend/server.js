@@ -66,11 +66,16 @@ app.use((req, res, next) => {
 // Middleware de tratamento de erros
 app.use(ErrorHandler.expressErrorHandler);
 
-// Iniciar servidor
-const server = app.listen(port, () => {
-  logger.info(`Servidor iniciado em http://localhost:${port}`);
-  logger.info(`Ambiente: ${config.nodeEnv}`);
-});
+// Exportar app para Vercel (serverless)
+module.exports = app;
+
+// Iniciar servidor apenas se não estiver no Vercel
+if (require.main === module) {
+  const server = app.listen(port, () => {
+    logger.info(`Servidor iniciado em http://localhost:${port}`);
+    logger.info(`Ambiente: ${config.nodeEnv}`);
+  });
+}
 
 // Gerenciamento de erros não capturados
 process.on("uncaughtException", (error) => {
