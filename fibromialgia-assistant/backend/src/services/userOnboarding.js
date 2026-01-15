@@ -142,8 +142,11 @@ class UserOnboarding {
    * Determina o próximo passo do onboarding
    */
   _getNextOnboardingStep(user) {
-    if (!user.name && !user.nickname) {
+    if (!user.name) {
       return "name";
+    }
+    if (!user.nickname) {
+      return "nickname";
     }
     if (!user.age && !user.gender) {
       return "basic_info";
@@ -346,7 +349,10 @@ class UserOnboarding {
         return `${greetings}\n\nMeu nome é Livia 🌷\n\nSou sua assistente virtual especializada em fibromialgia. Estou aqui para te acompanhar todos os dias, entender sua rotina, seus sintomas e te ajudar a encontrar padrões que possam melhorar seu bem-estar.\n\n✨ Como posso te ajudar:\n• Acompanhar como você está se sentindo\n• Identificar padrões entre sua rotina e sintomas\n• Fazer previsões sobre seus dias (com base no que aprendi sobre você)\n• Enviar mensagens diárias às 8h da manhã com insights personalizados\n• Te ajudar a entender o que pode estar influenciando seus sintomas\n\n💬 Você pode me enviar:\n• Texto: me conte como está se sentindo\n• Áudio: fale comigo naturalmente\n• Imagens: compartilhe algo relevante\n• Documentos: relatórios médicos, anotações\n\n⚠️ Importante: Eu NÃO faço diagnósticos, NÃO prescrevo medicamentos e NÃO substituo consultas médicas. Sou uma companheira que entende fibromialgia e está presente todos os dias.\n\nVamos começar? Antes de tudo, qual é o seu nome? 😊`;
 
       case "name":
-        return `${greetings}\n\nPrazer em conhecê-lo(a)! 👋\n\nPara personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?`;
+        return `${greetings}\n\nPrazer em conhecê-lo(a)! 👋\n\nE como você prefere ser chamado(a)? (pode ser um apelido, diminutivo ou o próprio nome)`;
+      
+      case "nickname":
+        return `${greetings}\n\nPerfeito! Vou te chamar assim então. 😊\n\nPara personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?`;
 
       case "basic_info":
         return `Entendi! Obrigada por compartilhar. 💙\n\nAgora, me fale sobre seu sono:\n- Quantas horas você costuma dormir por noite?\n- Como você avalia a qualidade do seu sono? (bom, médio, ruim)`;
