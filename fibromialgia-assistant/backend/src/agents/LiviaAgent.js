@@ -245,7 +245,10 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           normalizedMessage
         );
         const hasProfile = !!onboardingStatus.profile;
-        const isFirstMessage = isGenericGreeting && !hasProfile && currentStep === "welcome" && !onboardingStatus.error;
+        // Se currentStep é null (erro no banco) ou "welcome", pode ser primeira mensagem
+        const canBeFirstMessage = !currentStep || currentStep === "welcome";
+        // É primeira mensagem se: é cumprimento genérico E não tem perfil E pode ser primeira mensagem
+        const isFirstMessage = isGenericGreeting && !hasProfile && canBeFirstMessage;
 
         // Se NÃO é primeira mensagem, é uma resposta ao onboarding
         const isOnboardingResponse = !isFirstMessage;
