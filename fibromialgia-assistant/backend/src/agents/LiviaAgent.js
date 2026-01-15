@@ -623,6 +623,12 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
           message,
           response.text
         );
+        
+        // Extrair níveis de dor, energia e humor da mensagem
+        const levels = contextMemory.extractLevels(message);
+        if (levels.pain_level !== null || levels.energy_level !== null || levels.mood_level !== null) {
+          logger.info(`[Livia] Níveis extraídos:`, levels);
+        }
       } catch (memError) {
         logger.warn("[Livia] Erro ao extrair memórias:", memError.message);
       }

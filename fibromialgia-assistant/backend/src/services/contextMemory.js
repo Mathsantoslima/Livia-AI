@@ -486,6 +486,99 @@ class ContextMemory {
   }
 
   /**
+   * Extrai níveis de dor, energia e humor da mensagem
+   */
+  extractLevels(message) {
+    const levels = {
+      pain_level: null,
+      energy_level: null,
+      mood_level: null,
+    };
+
+    const messageLower = message.toLowerCase();
+
+    // Extrair nível de dor
+    const painMatch = message.match(/dor\s*(?:de|nivel|nível)?\s*(\d+)/i) ||
+                      message.match(/(\d+)\s*(?:de dor|\/10)/i);
+    if (painMatch) {
+      levels.pain_level = Math.min(10, parseInt(painMatch[1]));
+    } else if (/muita dor|dor forte|dor intensa/i.test(messageLower)) {
+      levels.pain_level = 8;
+    } else if (/pouca dor|dor leve|dor fraca/i.test(messageLower)) {
+      levels.pain_level = 3;
+    } else if (/sem dor|não sinto dor|zero dor/i.test(messageLower)) {
+      levels.pain_level = 0;
+    } else if (/dor|doendo|dói/i.test(messageLower)) {
+      levels.pain_level = 5; // Nível médio se apenas mencionar dor
+    }
+
+    // Extrair nível de energia
+    const energyMatch = message.match(/energia\s*(?:de|nivel|nível)?\s*(\d+)/i);
+    if (energyMatch) {
+      levels.energy_level = Math.min(10, parseInt(energyMatch[1]));
+    } else if (/muita energia|energizado|disposto/i.test(messageLower)) {
+      levels.energy_level = 8;
+    } else if (/pouca energia|cansado|exausto|esgotado|fadiga/i.test(messageLower)) {
+      levels.energy_level = 3;
+    } else if (/sem energia|zero energia/i.test(messageLower)) {
+      levels.energy_level = 1;
+    }
+
+    // Extrair nível de humor
+    if (/muito bem|ótimo|maravilhoso|feliz/i.test(messageLower)) {
+      levels.mood_level = 9;
+    } else if (/bem|ok|normal|tranquilo/i.test(messageLower)) {
+      levels.mood_level = 6;
+    } else if (/mal|triste|desanimado|deprimido/i.test(messageLower)) {
+      levels.mood_level = 3;
+    } else if (/péssimo|horrível|muito mal/i.test(messageLower)) {
+      levels.mood_level = 1;
+    }
+
+    return levels;
+  }
+
+  /**
+   * Atualiza conversa com níveis extraídos
+   */
+  async updateConversationLevels(conversationId, levels) {
+    try {
+      const updateData = {};
+      
+      if (levels.pain_level !== null) {
+        updateData.pain_level = levels.pain_level;
+      }
+      if (levels.energy_level !== null) {
+        updateData.energy_level = levels.energy_level;
+      }
+      if (levels.mood_level !== null) {
+        updateData.mood_level = levels.mood_level;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return { success: true, updated: false };
+      }
+
+      const { error } = await supabase
+        .from("conversations_livia")
+        .update(updateData)
+        .eq("id", conversationId);
+
+      if (error) throw error;
+
+      logger.info(
+        `[ContextMemory] Níveis atualizados para conversa ${conversationId}:`,
+        updateData
+      );
+
+      return { success: true, updated: true };
+    } catch (error) {
+      logger.error("[ContextMemory] Erro ao atualizar níveis:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Constrói o prompt de contexto para o agente
    */
   buildContextPrompt(context) {

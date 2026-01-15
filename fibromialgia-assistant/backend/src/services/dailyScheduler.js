@@ -12,6 +12,7 @@ const logger = require("../utils/logger");
 const { supabase } = require("../config/supabase");
 const predictiveAnalysis = require("./predictiveAnalysis");
 const globalLearning = require("./globalLearning");
+const contextMemory = require("./contextMemory");
 const { getAIInfrastructure } = require("../ai-infra/index");
 
 class DailyScheduler {
@@ -183,7 +184,12 @@ class DailyScheduler {
    */
   async generateDailyMessage(user, analysis, liviaAgent) {
     try {
-      const name = user.name || user.nickname || "querido(a)";
+      // Carregar contexto completo do usuário
+      const fullContext = await contextMemory.loadUserContext(user.phone);
+      const contextSummary = contextMemory.getContextSummary(fullContext);
+      
+      // Usar apelido se disponível, senão nome
+      const name = contextSummary.name || user.nickname || user.name || "querido(a)";
       const today = analysis.today;
       const yesterday = analysis.yesterday;
 
@@ -192,26 +198,46 @@ class DailyScheduler {
         type: "daily_message",
         analysis: analysis,
         user: user,
+        fullContext: fullContext,
+        contextSummary: contextSummary,
+        isReturningUser: contextSummary.isReturningUser,
+        lastInteractionTime: contextSummary.lastInteractionTime,
       };
 
+      // Construir prompt de contexto se disponível
+      const contextPrompt = fullContext ? contextMemory.buildContextPrompt(fullContext) : "";
+      
       // Usar o agente para gerar mensagem mais natural
-      const prompt = `Você é a Livia, assistente empática para pessoas com fibromialgia.
+      const prompt = `Você é a Livia, uma AMIGA que entende profundamente fibromialgia.
 
 Hoje é ${new Date().toLocaleDateString("pt-BR")}.
+
+CONTEXTO DO USUÁRIO:
+${contextPrompt}
 
 Com base no dia de ontem de ${name}:
 ${this._formatAnalysisForPrompt(yesterday, today)}
 
-Gere uma mensagem matinal (08:00 AM) que:
-1. Referencie o dia anterior de forma natural
-2. Use o histórico recente
-3. Faça uma leitura preditiva leve sobre como provavelmente será o dia de hoje
-4. Seja empática, calorosa e natural
-5. Use frases curtas e quebradas
-6. Não seja robótica
-7. Não repita que está "anotando" ou "analisando"
+${contextSummary.lastInteractionTime ? `Última conversa: ${contextSummary.lastInteractionTime}` : ""}
 
-A mensagem deve soar como uma amiga que entende de fibromialgia e está presente todos os dias.
+Gere uma mensagem matinal (08:00 AM) que:
+1. Use o nome/apelido do usuário naturalmente
+2. Referencie algo específico da última conversa ou do histórico
+3. Faça uma leitura preditiva leve sobre como provavelmente será o dia
+4. Seja empática, calorosa e PESSOAL (não genérica)
+5. Use frases curtas e quebradas (estilo WhatsApp)
+6. Pareça uma amiga mandando mensagem, não uma assistente
+
+🚫 PROIBIDO:
+- "Bom dia!" genérico
+- "Espero que esteja bem"
+- "Estou aqui para ajudar"
+- Frases robóticas
+
+✅ FAÇA:
+- Mencione algo específico do usuário
+- Use o nome naturalmente
+- Faça uma pergunta baseada no contexto
 
 IMPORTANTE: Não diagnostique, não prescreva medicamentos.`;
 
