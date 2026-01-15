@@ -69,42 +69,40 @@ app.use(ErrorHandler.expressErrorHandler);
 // Exportar app para Vercel (serverless)
 module.exports = app;
 
-// Iniciar servidor apenas se não estiver no Vercel
+// Iniciar servidor apenas se executado diretamente (não no Vercel)
 if (require.main === module) {
   const server = app.listen(port, () => {
     logger.info(`Servidor iniciado em http://localhost:${port}`);
     logger.info(`Ambiente: ${config.nodeEnv}`);
   });
-}
 
-// Gerenciamento de erros não capturados
-process.on("uncaughtException", (error) => {
-  logger.error("Erro não capturado:", error);
-  process.exit(1);
-});
-
-process.on("unhandledRejection", (reason, promise) => {
-  logger.error("Promessa rejeitada não tratada:", { reason, promise });
-});
-
-// Graceful shutdown
-process.on("SIGTERM", gracefulShutdown);
-process.on("SIGINT", gracefulShutdown);
-
-function gracefulShutdown() {
-  logger.info("Recebido sinal de encerramento. Fechando servidor...");
-  server.close(() => {
-    logger.info("Servidor encerrado com sucesso.");
-    process.exit(0);
+  // Gerenciamento de erros não capturados (apenas em modo local)
+  process.on("uncaughtException", (error) => {
+    logger.error("Erro não capturado:", error);
+    process.exit(1);
   });
 
-  // Forçar encerramento após 10 segundos se não fechar normalmente
-  setTimeout(() => {
-    logger.error(
-      "Não foi possível encerrar o servidor graciosamente. Forçando encerramento."
-    );
-    process.exit(1);
-  }, 10000);
-}
+  process.on("unhandledRejection", (reason, promise) => {
+    logger.error("Promessa rejeitada não tratada:", { reason, promise });
+  });
 
-module.exports = server;
+  // Graceful shutdown (apenas em modo local)
+  process.on("SIGTERM", gracefulShutdown);
+  process.on("SIGINT", gracefulShutdown);
+
+  function gracefulShutdown() {
+    logger.info("Recebido sinal de encerramento. Fechando servidor...");
+    server.close(() => {
+      logger.info("Servidor encerrado com sucesso.");
+      process.exit(0);
+    });
+
+    // Forçar encerramento após 10 segundos se não fechar normalmente
+    setTimeout(() => {
+      logger.error(
+        "Não foi possível encerrar o servidor graciosamente. Forçando encerramento."
+      );
+      process.exit(1);
+    }, 10000);
+  }
+}
