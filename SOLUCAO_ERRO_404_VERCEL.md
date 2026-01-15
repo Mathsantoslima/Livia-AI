@@ -17,6 +17,7 @@ O Vercel precisa que o arquivo `server.js` **exporte o app Express**, não o ser
 ### **Mudanças no `server.js`**
 
 **Antes:**
+
 ```javascript
 const server = app.listen(port, () => {
   // ...
@@ -26,6 +27,7 @@ module.exports = server; // ❌ ERRADO para Vercel
 ```
 
 **Depois:**
+
 ```javascript
 // Exportar app para Vercel (serverless) - DEVE SER O ÚLTIMO
 module.exports = app; // ✅ CORRETO para Vercel
@@ -44,11 +46,13 @@ if (require.main === module) {
 ## 🎯 Como Funciona
 
 ### **No Vercel (Serverless)**
+
 - O Vercel importa o `app` Express
 - O Vercel gerencia o servidor HTTP automaticamente
 - Não precisa chamar `app.listen()`
 
 ### **Localmente (Desenvolvimento)**
+
 - `require.main === module` é `true`
 - O servidor HTTP é iniciado normalmente
 - Graceful shutdown funciona normalmente
@@ -69,11 +73,13 @@ if (require.main === module) {
 ## 🧪 Testar Após Deploy
 
 ### **1. Health Check**
+
 ```bash
 curl https://seu-projeto.vercel.app/health
 ```
 
 **Resposta esperada:**
+
 ```json
 {
   "status": "online",
@@ -84,11 +90,13 @@ curl https://seu-projeto.vercel.app/health
 ```
 
 ### **2. API Test**
+
 ```bash
 curl https://seu-projeto.vercel.app/api/test
 ```
 
 **Resposta esperada:**
+
 ```json
 {
   "message": "API está funcionando!"
@@ -96,6 +104,7 @@ curl https://seu-projeto.vercel.app/api/test
 ```
 
 ### **3. Webhook (POST)**
+
 ```bash
 curl -X POST https://seu-projeto.vercel.app/webhook/w-api \
   -H "Content-Type: application/json" \
@@ -109,6 +118,7 @@ curl -X POST https://seu-projeto.vercel.app/webhook/w-api \
 ### **1. Verificar Root Directory**
 
 No Vercel Dashboard:
+
 - **Settings > General > Root Directory**: `fibromialgia-assistant/backend`
 
 ### **2. Verificar vercel.json**
@@ -136,6 +146,7 @@ O `vercel.json` deve estar em `fibromialgia-assistant/backend/vercel.json`:
 ### **3. Verificar Logs do Vercel**
 
 No dashboard do Vercel:
+
 1. Vá em **Deployments**
 2. Clique no deployment
 3. Veja os **Function Logs**
@@ -144,6 +155,7 @@ No dashboard do Vercel:
 ### **4. Verificar Variáveis de Ambiente**
 
 Certifique-se de que todas as variáveis estão configuradas:
+
 - `SUPABASE_URL`
 - `SUPABASE_KEY`
 - `GOOGLE_AI_API_KEY`
@@ -159,11 +171,13 @@ Certifique-se de que todas as variáveis estão configuradas:
 Após o deploy correto, estas rotas devem funcionar:
 
 ### **Públicas:**
+
 - `GET /health` - Health check
 - `GET /api/test` - Teste da API
 - `POST /webhook/w-api` - Webhook W-API
 
 ### **Protegidas (requerem JWT):**
+
 - `GET /api/dashboard` - Dashboard
 - `GET /api/users` - Usuários
 - `GET /api/webhook/status` - Status WhatsApp
