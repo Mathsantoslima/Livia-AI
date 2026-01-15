@@ -2,7 +2,7 @@
  * =========================================
  * AGENTE LIVIA - CONFIGURAÇÃO ESPECÍFICA
  * =========================================
- * 
+ *
  * Agente especializado em fibromialgia
  * Configuração de persona, regras e restrições
  */
@@ -24,7 +24,7 @@ class LiviaAgent extends AgentBase {
     // Configuração específica da Livia
     const liviaConfig = {
       name: "Livia",
-      
+
       // Providers - Múltiplos modelos de IA com fallback automático
       providers: config.providers || {
         gemini: {
@@ -40,20 +40,30 @@ class LiviaAgent extends AgentBase {
           model: process.env.CLAUDE_MODEL || "claude-3-sonnet-20240229",
         },
       },
-      
+
       // Provider preferido (opcional, deixe null para usar estratégia automática)
       preferredProvider: config.preferredProvider || null,
-      
+
       // Estratégia de seleção: "fallback" (padrão), "round-robin", "best-performance"
       providerStrategy: config.providerStrategy || "fallback",
-      
+
       // Ordem de fallback
       fallbackOrder: config.fallbackOrder || ["gemini", "chatgpt", "claude"],
-      
-      // Persona
+
+      // Persona expandida e preditiva
       persona: `Você é Livia, uma assistente carinhosa e empática especializada em ajudar pessoas com fibromialgia.
 Você age como um copiloto humano no dia a dia, oferecendo suporte emocional e prático.
-Sua linguagem é natural, calorosa e próxima, como uma amiga que entende profundamente a condição.`,
+Sua linguagem é natural, calorosa e próxima, como uma amiga que entende profundamente a condição.
+
+Você tem memória completa de cada usuário e usa essa informação para:
+- Referenciar eventos passados naturalmente ("Ontem você comentou que...")
+- Evitar perguntas repetitivas
+- Demonstrar que realmente se lembra da pessoa
+- Fazer conexões entre rotina, esforço físico/mental e sintomas
+- Trabalhar com probabilidades e preditividade, não certezas
+- Ajudar psicologicamente a entender causas comportamentais e emocionais da fibromialgia
+
+Você NUNCA diagnostica ou prescreve medicamentos.`,
 
       // Objetivos
       objectives: [
@@ -72,7 +82,7 @@ Sua linguagem é natural, calorosa e próxima, como uma amiga que entende profun
         "Respeite os limites e escolhas do usuário",
       ],
 
-      // Regras de conversa
+      // Regras de conversa expandidas
       conversationRules: [
         "Quebre suas respostas em mensagens curtas (máximo 2 frases por bloco)",
         "Evite loops de confirmação desnecessários (não diga 'vou anotar isso' a menos que seja realmente necessário)",
@@ -81,7 +91,13 @@ Sua linguagem é natural, calorosa e próxima, como uma amiga que entende profun
         "Use o nome da pessoa quando souber",
         "Evite perguntas repetitivas - use o contexto para continuar a conversa",
         "Seja empática mas não exagerada",
-        "Referencie conversas passadas quando relevante",
+        "SEMPRE referencie conversas passadas quando relevante - demonstre memória real",
+        "Use informações da rotina do usuário para fazer conexões",
+        "Relacione esforço físico/mental com sintomas quando apropriado",
+        "Trabalhe com probabilidades ('pode ser que...', 'é provável que...')",
+        "Nunca comece conversas do zero - sempre use o histórico",
+        "Faça perguntas baseadas no que já sabe sobre a pessoa",
+        "Seja preditiva quando fizer sentido ('Com base no seu dia de ontem...')",
       ],
 
       // Memory Manager
@@ -93,7 +109,11 @@ Sua linguagem é natural, calorosa e próxima, como uma amiga que entende profun
     // Configurar estratégia do ProviderManager se especificado
     if (this.providerManager && config.providerStrategy) {
       this.providerManager.strategy = config.providerStrategy;
-      this.providerManager.fallbackOrder = config.fallbackOrder || ["gemini", "chatgpt", "claude"];
+      this.providerManager.fallbackOrder = config.fallbackOrder || [
+        "gemini",
+        "chatgpt",
+        "claude",
+      ];
     }
 
     // Registrar tools específicas da Livia
@@ -154,24 +174,148 @@ Sua linguagem é natural, calorosa e próxima, como uma amiga que entende profun
 
   /**
    * Processa mensagem com lógica adicional da Livia
+   * Usa contexto completo do usuário em todas as respostas
    */
   async processMessage(userId, message, context = {}) {
     try {
+      // Carregar memória completa do usuário
+      const userMemory = await this.memoryManager.getUserMemory(userId);
+
+      // Carregar contexto de conversa (últimas mensagens)
+      const conversationContext =
+        await this.memoryManager.getConversationContext(userId, 10);
+
       // Carregar memória global para contexto
       const globalMemory = await this.memoryManager.getGlobalMemory(5);
-      context.globalInsights = globalMemory.insights;
 
-      // Processar com o AgentBase
+      // Carregar análise preditiva se disponível
+      const predictiveAnalysis = require("../services/predictiveAnalysis");
+      let predictiveContext = null;
+      try {
+        predictiveContext = await predictiveAnalysis.analyzeDay(userId);
+      } catch (predError) {
+        logger.warn(
+          "[Livia] Erro ao carregar análise preditiva:",
+          predError.message
+        );
+      }
+
+      // Construir contexto completo
+      context.userMemory = userMemory;
+      context.conversationContext = conversationContext;
+      context.globalInsights = globalMemory.insights;
+      context.predictiveContext = predictiveContext;
+
+      // Adicionar informações específicas para referências passadas
+      context.pastEvents = this._extractPastEvents(
+        conversationContext,
+        userMemory
+      );
+      context.routineContext = this._buildRoutineContext(userMemory);
+      context.behavioralContext = this._buildBehavioralContext(userMemory);
+
+      // Processar com o AgentBase (que já usa o contexto)
       const response = await super.processMessage(userId, message, context);
 
       // Pós-processamento específico da Livia
-      response.chunks = this._optimizeChunksForLivia(response.chunks || [response.text]);
+      response.chunks = this._optimizeChunksForLivia(
+        response.chunks || [response.text]
+      );
 
       return response;
     } catch (error) {
       logger.error("[Livia] Erro ao processar mensagem:", error);
       throw error;
     }
+  }
+
+  /**
+   * Extrai eventos passados relevantes da conversa
+   */
+  _extractPastEvents(conversationContext, userMemory) {
+    const events = [];
+
+    // Buscar eventos das últimas conversas
+    if (conversationContext && conversationContext.length > 0) {
+      conversationContext.forEach((msg, index) => {
+        if (msg.role === "user" && index < 5) {
+          // Extrair informações relevantes das últimas 5 mensagens do usuário
+          const content = msg.content.toLowerCase();
+
+          // Detectar menções de sintomas, atividades, etc.
+          if (content.includes("dor") || content.includes("dói")) {
+            events.push({
+              type: "symptom",
+              content: "mencionou dor",
+              timestamp: msg.timestamp,
+            });
+          }
+          if (content.includes("cansado") || content.includes("fadiga")) {
+            events.push({
+              type: "symptom",
+              content: "mencionou fadiga",
+              timestamp: msg.timestamp,
+            });
+          }
+          if (content.includes("trabalho") || content.includes("trabalhei")) {
+            events.push({
+              type: "activity",
+              content: "mencionou trabalho",
+              timestamp: msg.timestamp,
+            });
+          }
+          if (content.includes("exercício") || content.includes("caminhada")) {
+            events.push({
+              type: "activity",
+              content: "mencionou atividade física",
+              timestamp: msg.timestamp,
+            });
+          }
+        }
+      });
+    }
+
+    return events.slice(0, 3); // Retornar apenas os 3 mais recentes
+  }
+
+  /**
+   * Constrói contexto de rotina
+   */
+  _buildRoutineContext(userMemory) {
+    const routine = userMemory.dailyRoutine || {};
+    const habits = userMemory.habits || {};
+
+    return {
+      sleep: {
+        hours: habits.sleep?.averageHours || null,
+        quality: habits.sleep?.quality || null,
+      },
+      work: {
+        hours: habits.work?.hoursPerDay || null,
+        stressLevel: habits.work?.stressLevel || null,
+      },
+      physicalActivity: {
+        level: habits.physicalEffort?.level || null,
+        frequency: habits.physicalEffort?.frequency || null,
+      },
+      mentalActivity: {
+        level: habits.mentalEffort?.level || null,
+      },
+    };
+  }
+
+  /**
+   * Constrói contexto comportamental
+   */
+  _buildBehavioralContext(userMemory) {
+    const profile = userMemory.behavioralProfile || {};
+
+    return {
+      communicationStyle: profile.communicationStyle || null,
+      responsePattern: profile.responsePattern || null,
+      emotionalTendency: profile.emotionalTendency || null,
+      copingMechanisms: profile.copingMechanisms || [],
+    };
   }
 
   /**
@@ -182,7 +326,9 @@ Sua linguagem é natural, calorosa e próxima, como uma amiga que entende profun
 
     chunks.forEach((chunk) => {
       // Quebrar em frases
-      const sentences = chunk.split(/[.!?]\s+/).filter((s) => s.trim().length > 0);
+      const sentences = chunk
+        .split(/[.!?]\s+/)
+        .filter((s) => s.trim().length > 0);
 
       // Agrupar em blocos de 1-2 frases
       let currentBlock = "";

@@ -12,6 +12,7 @@
 
 const logger = require("../utils/logger");
 const wApiService = require("../services/wApiService");
+const mediaProcessor = require("../services/mediaProcessor");
 
 class WhatsAppChannel {
   constructor(agent, whatsappClient = null, config = {}) {
@@ -33,26 +34,117 @@ class WhatsAppChannel {
    */
   async handleIncomingMessage(messageData) {
     try {
-      const { from, body, messageId, timestamp } =
-        this._extractMessageData(messageData);
+      const extracted = this._extractMessageData(messageData);
+      const { from, body, messageId, timestamp, mediaType, mediaUrl } = extracted;
 
-      if (!from || !body) {
-        logger.warn("Mensagem inválida recebida do WhatsApp");
+      if (!from) {
+        logger.warn("Mensagem inválida recebida do WhatsApp (sem remetente)");
+        return;
+      }
+
+      // Converter telefone para userId
+      const userId = this._phoneToUserId(from);
+
+      let processedContent = body || "";
+      let mediaContext = null;
+
+      // Processar mídia se presente
+      if (mediaType && mediaUrl) {
+        try {
+          logger.info(
+            `[WhatsApp] Processando mídia ${mediaType} de ${from}: ${mediaUrl}`
+          );
+
+          if (mediaType === "audio") {
+            const audioResult = await mediaProcessor.processAudio(
+              mediaUrl,
+              extracted.mimeType
+            );
+            processedContent = audioResult.text;
+            mediaContext = {
+              type: "audio",
+              transcription: audioResult.text,
+              language: audioResult.language,
+            };
+            logger.info(
+              `[WhatsApp] Áudio transcrito: ${processedContent.substring(0, 50)}...`
+            );
+          } else if (mediaType === "image") {
+            const imageResult = await mediaProcessor.processImage(
+              mediaUrl,
+              body // Caption se houver
+            );
+            processedContent = body
+              ? `${body}\n\n[Imagem: ${imageResult.description}]`
+              : `[Imagem: ${imageResult.description}]`;
+            mediaContext = {
+              type: "image",
+              description: imageResult.description,
+              context: imageResult.context,
+              relevantInfo: imageResult.relevantInfo,
+            };
+            logger.info(
+              `[WhatsApp] Imagem analisada: ${imageResult.description.substring(
+                0,
+                50
+              )}...`
+            );
+          } else if (mediaType === "document") {
+            const docResult = await mediaProcessor.processDocument(
+              mediaUrl,
+              extracted.mimeType
+            );
+            processedContent = body
+              ? `${body}\n\n[Documento resumido: ${docResult.summary}]`
+              : `[Documento: ${docResult.summary}]`;
+            mediaContext = {
+              type: "document",
+              summary: docResult.summary,
+              relevantInfo: docResult.relevantInfo,
+              fullText: docResult.text.substring(0, 2000), // Limitar tamanho
+            };
+            logger.info(
+              `[WhatsApp] Documento processado: ${docResult.summary.substring(
+                0,
+                50
+              )}...`
+            );
+          }
+        } catch (mediaError) {
+          logger.error(
+            `[WhatsApp] Erro ao processar mídia ${mediaType}:`,
+            mediaError
+          );
+          // Continuar com texto se houver, ou enviar mensagem de erro
+          if (!processedContent) {
+            processedContent =
+              "Recebi sua mídia, mas tive dificuldade para processá-la. Pode descrever o que enviou?";
+          }
+        }
+      }
+
+      if (!processedContent && !mediaContext) {
+        logger.warn(
+          "[WhatsApp] Mensagem sem conteúdo processável recebida do WhatsApp"
+        );
         return;
       }
 
       logger.info(
-        `[WhatsApp] Mensagem recebida de ${from}: ${body.substring(0, 50)}...`
+        `[WhatsApp] Mensagem recebida de ${from}: ${processedContent.substring(
+          0,
+          50
+        )}...`
       );
 
-      // Converter telefone para userId (assumindo que userId = phone)
-      const userId = this._phoneToUserId(from);
-
-      // Processar com o agente
-      const response = await this.agent.processMessage(userId, body, {
+      // Processar com o agente (incluindo contexto de mídia)
+      const response = await this.agent.processMessage(userId, processedContent, {
         channel: "whatsapp",
         messageId,
         timestamp,
+        mediaType,
+        mediaContext,
+        originalBody: body, // Manter texto original se houver
       });
 
       // Enviar resposta
@@ -62,10 +154,12 @@ class WhatsAppChannel {
 
       // Enviar mensagem de erro mais amigável
       try {
-        const errorMessage = error.message?.includes("Todos os providers falharam")
+        const errorMessage = error.message?.includes(
+          "Todos os providers falharam"
+        )
           ? "Olá! 😊 Estou tendo dificuldades técnicas no momento. Por favor, tente novamente em alguns instantes. Se o problema persistir, pode ser necessário verificar as configurações dos serviços de IA."
           : "Desculpe, tive um problema técnico. Pode repetir?";
-        
+
         await this.sendMessage(from, errorMessage);
       } catch (sendError) {
         logger.error("[WhatsApp] Erro ao enviar mensagem de erro:", sendError);
@@ -173,27 +267,75 @@ class WhatsAppChannel {
     // Formato W-API (prioridade - mais comum agora)
     if (messageData.sender || messageData.msgContent) {
       const from =
-        messageData.sender?.id ||
-        messageData.chat?.id ||
-        messageData.from;
-      
-      let body = "";
-      if (messageData.text) {
-        body = messageData.text;
-      } else if (messageData.msgContent?.extendedTextMessage?.text) {
-        body = messageData.msgContent.extendedTextMessage.text;
-      } else if (messageData.msgContent?.conversation) {
-        body = messageData.msgContent.conversation;
-      } else if (messageData.msgContent?.imageMessage?.caption) {
-        body = messageData.msgContent.imageMessage.caption;
-      } else if (messageData.body) {
-        body = messageData.body;
-      }
-      
-      const messageId = messageData.messageId || messageData.id;
-      const timestamp = messageData.moment || messageData.timestamp || Date.now();
+        messageData.sender?.id || messageData.chat?.id || messageData.from;
 
-      return { from, body, messageId, timestamp };
+      let body = "";
+      let mediaType = null;
+      let mediaUrl = null;
+      let mimeType = null;
+
+      // Detectar tipo de mídia
+      if (messageData.msgContent) {
+        // Áudio
+        if (messageData.msgContent.audioMessage) {
+          mediaType = "audio";
+          mediaUrl =
+            messageData.msgContent.audioMessage.url ||
+            messageData.msgContent.audioMessage.directPath;
+          mimeType = messageData.msgContent.audioMessage.mimetype || "audio/ogg";
+          body = messageData.msgContent.audioMessage.caption || "";
+        }
+        // Imagem
+        else if (messageData.msgContent.imageMessage) {
+          mediaType = "image";
+          mediaUrl =
+            messageData.msgContent.imageMessage.url ||
+            messageData.msgContent.imageMessage.directPath;
+          mimeType = messageData.msgContent.imageMessage.mimetype || "image/jpeg";
+          body = messageData.msgContent.imageMessage.caption || "";
+        }
+        // Vídeo (tratar como mídia, mas não processar por enquanto)
+        else if (messageData.msgContent.videoMessage) {
+          mediaType = "video";
+          mediaUrl =
+            messageData.msgContent.videoMessage.url ||
+            messageData.msgContent.videoMessage.directPath;
+          mimeType = messageData.msgContent.videoMessage.mimetype || "video/mp4";
+          body = messageData.msgContent.videoMessage.caption || "";
+        }
+        // Documento
+        else if (messageData.msgContent.documentMessage) {
+          mediaType = "document";
+          mediaUrl =
+            messageData.msgContent.documentMessage.url ||
+            messageData.msgContent.documentMessage.directPath;
+          mimeType =
+            messageData.msgContent.documentMessage.mimetype ||
+            "application/pdf";
+          body = messageData.msgContent.documentMessage.caption || "";
+        }
+        // Texto
+        else if (messageData.msgContent.extendedTextMessage?.text) {
+          body = messageData.msgContent.extendedTextMessage.text;
+        } else if (messageData.msgContent.conversation) {
+          body = messageData.msgContent.conversation;
+        }
+      }
+
+      // Fallback para texto simples
+      if (!body && !mediaType) {
+        if (messageData.text) {
+          body = messageData.text;
+        } else if (messageData.body) {
+          body = messageData.body;
+        }
+      }
+
+      const messageId = messageData.messageId || messageData.id;
+      const timestamp =
+        messageData.moment || messageData.timestamp || Date.now();
+
+      return { from, body, messageId, timestamp, mediaType, mediaUrl, mimeType };
     }
 
     // Formato Baileys

@@ -24,6 +24,7 @@ try {
   const { config } = require("./src/config");
   const logger = require("./src/utils/logger");
   const { ErrorHandler } = require("./src/utils/errorHandler");
+  const dailyScheduler = require("./src/services/dailyScheduler");
 
   // Inicializar aplicação Express
   app = express();
@@ -173,6 +174,14 @@ if (require.main === module && app) {
     const server = app.listen(port, () => {
       logger.info(`Servidor iniciado em http://localhost:${port}`);
       logger.info(`Ambiente: ${config.nodeEnv}`);
+      
+      // Iniciar scheduler de mensagens diárias (apenas em modo local, não no Vercel)
+      try {
+        dailyScheduler.start();
+        logger.info("[Server] Scheduler de mensagens diárias iniciado");
+      } catch (schedulerError) {
+        logger.warn("[Server] Erro ao iniciar scheduler:", schedulerError.message);
+      }
     });
 
     // Gerenciamento de erros não capturados (apenas em modo local)
@@ -191,6 +200,14 @@ if (require.main === module && app) {
 
     function gracefulShutdown() {
       logger.info("Recebido sinal de encerramento. Fechando servidor...");
+      
+      // Parar scheduler
+      try {
+        dailyScheduler.stop();
+      } catch (schedulerError) {
+        logger.warn("Erro ao parar scheduler:", schedulerError.message);
+      }
+      
       server.close(() => {
         logger.info("Servidor encerrado com sucesso.");
         process.exit(0);

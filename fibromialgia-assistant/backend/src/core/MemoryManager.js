@@ -66,9 +66,10 @@ class MemoryManager {
       // Gerar resumo do histórico
       const summary = this._generateHistorySummary(recentMessages || []);
 
-      // Construir memória
+      // Construir memória expandida
       const memory = {
         name: user.name || user.nickname || null,
+        phone: user.phone,
         preferences: user.preferences || {},
         patterns: (patterns || []).map((p) => ({
           type: p.pattern_type,
@@ -78,6 +79,19 @@ class MemoryManager {
         summary,
         lastInteraction: user.last_interaction || user.ultimo_contato,
         engagementLevel: user.nivel_engajamento || 0,
+        // Novos campos expandidos
+        dailyRoutine: user.daily_routine || {},
+        behavioralProfile: user.behavioral_profile || {},
+        habits: user.habits || {},
+        recurringSymptoms: user.recurring_symptoms || [],
+        perceivedTriggers: user.perceived_triggers || [],
+        strategiesThatWorked: user.strategies_that_worked || [],
+        strategiesThatFailed: user.strategies_that_failed || [],
+        // Informações de saúde
+        mainSymptoms: user.main_symptoms || [],
+        triggers: user.triggers || [],
+        medications: user.medications || [],
+        severityLevel: user.severity_level,
       };
 
       // Salvar no cache
