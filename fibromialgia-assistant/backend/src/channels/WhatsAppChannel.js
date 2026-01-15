@@ -57,74 +57,98 @@ class WhatsAppChannel {
       let originalMediaType = mediaType; // Guardar tipo original para resposta
 
       // Processar mídia se presente
-      if (mediaType && mediaUrl) {
+      if (mediaType) {
         logger.info(
-          `[WhatsApp] Iniciando processamento de mídia ${mediaType} de ${from}: ${mediaUrl}`
+          `[WhatsApp] ✅ MÍDIA DETECTADA: tipo=${mediaType}, URL=${mediaUrl || "NÃO ENCONTRADA"}, MIME=${extracted.mimeType || "N/A"}`
         );
-        try {
-          logger.info(
-            `[WhatsApp] Processando mídia ${mediaType} de ${from}: ${mediaUrl}`
-          );
+        
+        if (mediaUrl) {
+          try {
+            logger.info(
+              `[WhatsApp] Iniciando processamento de mídia ${mediaType} de ${from}: ${mediaUrl}`
+            );
 
-          if (mediaType === "audio") {
-            const audioResult = await mediaProcessor.processAudio(
-              mediaUrl,
-              extracted.mimeType
+            if (mediaType === "audio") {
+              const audioResult = await mediaProcessor.processAudio(
+                mediaUrl,
+                extracted.mimeType
+              );
+              processedContent = audioResult.text;
+              mediaContext = {
+                type: "audio",
+                transcription: audioResult.text,
+                language: audioResult.language,
+              };
+              logger.info(
+                `[WhatsApp] ✅ Áudio transcrito: ${processedContent.substring(
+                  0,
+                  50
+                )}...`
+              );
+            } else if (mediaType === "image") {
+              const imageResult = await mediaProcessor.processImage(
+                mediaUrl,
+                body // Caption se houver
+              );
+              processedContent = body
+                ? `${body}\n\n[Imagem: ${imageResult.description}]`
+                : `[Imagem: ${imageResult.description}]`;
+              mediaContext = {
+                type: "image",
+                description: imageResult.description,
+                context: imageResult.context,
+                relevantInfo: imageResult.relevantInfo,
+              };
+              logger.info(
+                `[WhatsApp] ✅ Imagem analisada: ${imageResult.description.substring(
+                  0,
+                  50
+                )}...`
+              );
+            } else if (mediaType === "document") {
+              const docResult = await mediaProcessor.processDocument(
+                mediaUrl,
+                extracted.mimeType
+              );
+              processedContent = body
+                ? `${body}\n\n[Documento resumido: ${docResult.summary}]`
+                : `[Documento: ${docResult.summary}]`;
+              mediaContext = {
+                type: "document",
+                summary: docResult.summary,
+                relevantInfo: docResult.relevantInfo,
+                fullText: docResult.text.substring(0, 2000), // Limitar tamanho
+              };
+              logger.info(
+                `[WhatsApp] ✅ Documento processado: ${docResult.summary.substring(
+                  0,
+                  50
+                )}...`
+              );
+            }
+          } catch (mediaError) {
+            logger.error(
+              `[WhatsApp] ❌ ERRO ao processar mídia ${mediaType}:`,
+              mediaError
             );
-            processedContent = audioResult.text;
-            mediaContext = {
-              type: "audio",
-              transcription: audioResult.text,
-              language: audioResult.language,
-            };
-            logger.info(
-              `[WhatsApp] Áudio transcrito: ${processedContent.substring(
-                0,
-                50
-              )}...`
+            logger.error(
+              `[WhatsApp] Stack trace:`,
+              mediaError.stack
             );
-          } else if (mediaType === "image") {
-            const imageResult = await mediaProcessor.processImage(
-              mediaUrl,
-              body // Caption se houver
-            );
-            processedContent = body
-              ? `${body}\n\n[Imagem: ${imageResult.description}]`
-              : `[Imagem: ${imageResult.description}]`;
-            mediaContext = {
-              type: "image",
-              description: imageResult.description,
-              context: imageResult.context,
-              relevantInfo: imageResult.relevantInfo,
-            };
-            logger.info(
-              `[WhatsApp] Imagem analisada: ${imageResult.description.substring(
-                0,
-                50
-              )}...`
-            );
-          } else if (mediaType === "document") {
-            const docResult = await mediaProcessor.processDocument(
-              mediaUrl,
-              extracted.mimeType
-            );
-            processedContent = body
-              ? `${body}\n\n[Documento resumido: ${docResult.summary}]`
-              : `[Documento: ${docResult.summary}]`;
-            mediaContext = {
-              type: "document",
-              summary: docResult.summary,
-              relevantInfo: docResult.relevantInfo,
-              fullText: docResult.text.substring(0, 2000), // Limitar tamanho
-            };
-            logger.info(
-              `[WhatsApp] Documento processado: ${docResult.summary.substring(
-                0,
-                50
-              )}...`
-            );
+            // Continuar com texto se houver, ou enviar mensagem de erro
+            if (!processedContent) {
+              processedContent =
+                "Recebi sua mídia, mas tive dificuldade para processá-la. Pode descrever o que enviou?";
+            }
           }
-        } catch (mediaError) {
+        } else {
+          logger.warn(
+            `[WhatsApp] ⚠️ Mídia ${mediaType} detectada mas sem URL. Tentando processar com informações disponíveis.`
+          );
+          // Mesmo sem URL, podemos tentar processar se houver outras informações
+          processedContent = body || `Recebi uma ${mediaType}, mas não consegui acessá-la. Pode descrever o que enviou?`;
+        }
+      }
           logger.error(
             `[WhatsApp] Erro ao processar mídia ${mediaType}:`,
             mediaError
@@ -421,12 +445,42 @@ class WhatsAppChannel {
         // Imagem
         else if (messageData.msgContent.imageMessage) {
           mediaType = "image";
+          // Tentar diferentes campos possíveis para URL da imagem
           mediaUrl =
             messageData.msgContent.imageMessage.url ||
-            messageData.msgContent.imageMessage.directPath;
+            messageData.msgContent.imageMessage.directPath ||
+            messageData.msgContent.imageMessage.mediaUrl ||
+            messageData.msgContent.imageMessage.media_key?.mediaUrl ||
+            messageData.msgContent.imageMessage.mediaKey?.mediaUrl;
           mimeType =
-            messageData.msgContent.imageMessage.mimetype || "image/jpeg";
+            messageData.msgContent.imageMessage.mimetype ||
+            messageData.msgContent.imageMessage.mimeType ||
+            "image/jpeg";
           body = messageData.msgContent.imageMessage.caption || "";
+
+          logger.info(
+            `[WhatsApp] Imagem detectada: URL=${
+              mediaUrl || "NÃO ENCONTRADA"
+            }, MIME=${mimeType}, Caption=${body || "sem legenda"}`
+          );
+
+          // Se não encontrou URL, tentar buscar em outros lugares do objeto
+          if (!mediaUrl) {
+            logger.warn(
+              "[WhatsApp] URL da imagem não encontrada em msgContent.imageMessage, tentando alternativas..."
+            );
+            // Tentar buscar no objeto raiz
+            if (messageData.imageUrl) {
+              mediaUrl = messageData.imageUrl;
+            } else if (messageData.mediaUrl && messageData.type === "image") {
+              mediaUrl = messageData.mediaUrl;
+            } else if (messageData.url && messageData.type === "image") {
+              mediaUrl = messageData.url;
+            }
+            logger.info(
+              `[WhatsApp] URL alternativa encontrada: ${mediaUrl || "NENHUMA"}`
+            );
+          }
         }
         // Vídeo (tratar como mídia, mas não processar por enquanto)
         else if (messageData.msgContent.videoMessage) {

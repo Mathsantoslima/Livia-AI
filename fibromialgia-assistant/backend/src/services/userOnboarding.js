@@ -400,10 +400,10 @@ class UserOnboarding {
    */
   getOnboardingQuestion(step, userName = null, userNickname = null) {
     // Usar nickname se disponível, senão usar name, senão genérico
-    const greetings = userNickname 
-      ? `Olá, ${userNickname}!` 
-      : userName 
-      ? `Olá, ${userName}!` 
+    const greetings = userNickname
+      ? `Olá, ${userNickname}!`
+      : userName
+      ? `Olá, ${userName}!`
       : "Olá!";
 
     switch (step) {
@@ -416,27 +416,27 @@ class UserOnboarding {
             `✨ Como posso te ajudar:\n• Acompanhar como você está se sentindo\n• Identificar padrões entre sua rotina e sintomas\n• Fazer previsões sobre seus dias (com base no que aprendi sobre você)\n• Enviar mensagens diárias às 8h da manhã com insights personalizados\n• Te ajudar a entender o que pode estar influenciando seus sintomas`,
             `💬 Você pode me enviar:\n• Texto: me conte como está se sentindo\n• Áudio: fale comigo naturalmente\n• Imagens: compartilhe algo relevante\n• Documentos: relatórios médicos, anotações`,
             `⚠️ Importante: Eu NÃO faço diagnósticos, NÃO prescrevo medicamentos e NÃO substituo consultas médicas. Sou uma companheira que entende fibromialgia e está presente todos os dias.`,
-            `Vamos começar? Antes de tudo, qual é o seu nome? 😊`
+            `Vamos começar? Antes de tudo, qual é o seu nome? 😊`,
           ],
-          isChunked: true
+          isChunked: true,
         };
 
       case "name":
         return {
           chunks: [
             `${greetings}\n\nPrazer em conhecê-lo(a)! 👋`,
-            `E como você prefere ser chamado(a)? (pode ser um apelido, diminutivo ou o próprio nome)`
+            `E como você prefere ser chamado(a)? (pode ser um apelido, diminutivo ou o próprio nome)`,
           ],
-          isChunked: true
+          isChunked: true,
         };
 
       case "nickname":
         return {
           chunks: [
             `${greetings}\n\nPerfeito! Vou te chamar assim então. 😊`,
-            `Para personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?`
+            `Para personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?`,
           ],
-          isChunked: true
+          isChunked: true,
         };
 
       case "basic_info":
@@ -457,9 +457,9 @@ class UserOnboarding {
             `Perfeito! Agora já tenho um perfil completo sobre você. 🎉`,
             `Vou usar essas informações para:\n• Entender melhor seus padrões\n• Fazer previsões sobre seus dias\n• Dar sugestões personalizadas\n• Te enviar mensagens diárias às 8h da manhã com insights`,
             `💡 Dica: Quanto mais você me contar sobre seu dia a dia, melhor eu consigo te ajudar a identificar o que funciona ou não para você.`,
-            `Agora pode me contar como você está se sentindo hoje? Ou se preferir, pode me enviar um áudio, uma imagem ou qualquer coisa que quiser compartilhar! 😊`
+            `Agora pode me contar como você está se sentindo hoje? Ou se preferir, pode me enviar um áudio, uma imagem ou qualquer coisa que quiser compartilhar! 😊`,
           ],
-          isChunked: true
+          isChunked: true,
         };
 
       default:

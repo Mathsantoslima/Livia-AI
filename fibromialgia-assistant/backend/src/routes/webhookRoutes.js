@@ -129,10 +129,21 @@ router.post("/w-api", async (req, res) => {
         });
       }
 
-      if (!from || !body) {
+      // Verificar se tem mídia (áudio, imagem, documento) mesmo sem body
+      const hasMedia =
+        messageData.msgContent?.audioMessage ||
+        messageData.msgContent?.imageMessage ||
+        messageData.msgContent?.documentMessage ||
+        messageData.msgContent?.videoMessage ||
+        messageData.type === "audio" ||
+        messageData.type === "image" ||
+        messageData.type === "document";
+
+      if (!from || (!body && !hasMedia)) {
         logger.warn("[W-API Webhook] Mensagem inválida recebida:", {
           from,
           hasBody: !!body,
+          hasMedia: !!hasMedia,
           event,
           messageData: JSON.stringify(messageData).substring(0, 200),
         });
