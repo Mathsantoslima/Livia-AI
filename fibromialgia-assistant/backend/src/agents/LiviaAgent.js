@@ -456,10 +456,40 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             welcomeChunks = [welcomeMessage];
           }
 
-          // CRITICAL: Salvar mensagem de welcome no banco ANTES de enviar
-          // Isso garante que na próxima requisição, _hasPreviousConversation detectará que welcome já foi enviado
-          // No Vercel serverless, o banco é a única fonte de verdade
+          // CRITICAL: Marcar onboarding_step = "welcome" no banco ANTES de enviar
+          // Isso garante que na próxima mensagem, o sistema saberá que welcome foi enviado
+          // e processará a resposta como "name" (evita loop definitivamente)
           try {
+            // Buscar ou criar usuário
+            const { data: user } = await supabase
+              .from("users_livia")
+              .select("id")
+              .eq("phone", normalizedUserId)
+              .single();
+
+            if (user) {
+              // Atualizar onboarding_step para "welcome"
+              await supabase
+                .from("users_livia")
+                .update({ onboarding_step: "welcome" })
+                .eq("id", user.id);
+              logger.info(
+                `[Livia] ✅ onboarding_step='welcome' marcado no banco para ${normalizedUserId}`
+              );
+            } else {
+              // Criar usuário com onboarding_step = "welcome"
+              await supabase.from("users_livia").insert({
+                phone: normalizedUserId,
+                onboarding_step: "welcome",
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              });
+              logger.info(
+                `[Livia] ✅ Usuário criado com onboarding_step='welcome' para ${normalizedUserId}`
+              );
+            }
+
+            // Salvar mensagem de welcome no histórico
             await this._saveOnboardingMessage(
               normalizedUserId,
               welcomeMessage,
@@ -470,14 +500,11 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             );
           } catch (saveError) {
             logger.error(
-              "[Livia] ERRO CRÍTICO ao salvar mensagem de welcome:",
+              "[Livia] ERRO CRÍTICO ao salvar welcome no banco:",
               saveError
             );
             // Continuar mesmo com erro, mas logar como crítico
           }
-
-          // Marcar no cache também (otimização, mas não confiável no serverless)
-          this._markWelcomeSent(normalizedUserId);
 
           return {
             text: welcomeMessage,
