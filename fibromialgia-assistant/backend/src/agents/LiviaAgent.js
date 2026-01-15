@@ -263,7 +263,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           // significa que está respondendo após welcome → sempre processar como "name"
           // Isso evita loop quando usuário responde após welcome mas ainda não tem perfil salvo
           let stepToProcess = currentStep;
-          
+
           if (currentStep === "welcome") {
             // Se currentStep é welcome mas não é primeira mensagem, sempre processar como name
             stepToProcess = "name";
@@ -271,7 +271,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
               `[Livia] ⚠️ currentStep é 'welcome' mas não é primeira mensagem. Processando como 'name' para evitar loop.`
             );
           }
-          
+
           logger.info(
             `[Livia] Processando resposta do passo: ${stepToProcess} (currentStep era: ${currentStep}, hasPreviousConversation: ${hasPreviousConversation})`
           );
