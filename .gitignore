@@ -60,6 +60,8 @@ baileys_auth/
 !package.json
 !package-lock.json
 !tsconfig.json
+!vercel.json
+!**/vercel.json
 
 # Arquivos temporários
 *.tmp
