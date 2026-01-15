@@ -277,20 +277,53 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           );
 
           // Atualizar perfil com a resposta
-          await userOnboarding.updateUserProfile(
-            normalizedUserId,
-            stepToProcess,
-            message
-          );
+          try {
+            logger.info(
+              `[Livia] Chamando updateUserProfile para ${normalizedUserId}, passo: ${stepToProcess}, resposta: ${message.substring(0, 50)}...`
+            );
+            await userOnboarding.updateUserProfile(
+              normalizedUserId,
+              stepToProcess,
+              message
+            );
+            logger.info(
+              `[Livia] updateUserProfile concluído com sucesso para ${normalizedUserId}`
+            );
+          } catch (updateError) {
+            logger.error(
+              `[Livia] ERRO ao atualizar perfil do usuário ${normalizedUserId}:`,
+              updateError
+            );
+            logger.error(`[Livia] Stack trace do erro:`, updateError.stack);
+            // Continuar mesmo com erro, tentar verificar próximo passo
+          }
 
           // Verificar próximo passo
-          const nextStatus = await userOnboarding.checkOnboardingStatus(
-            normalizedUserId
-          );
+          let nextStatus;
+          try {
+            logger.info(
+              `[Livia] Verificando próximo passo após atualizar perfil para ${normalizedUserId}`
+            );
+            nextStatus = await userOnboarding.checkOnboardingStatus(
+              normalizedUserId
+            );
 
-          logger.info(
-            `[Livia] Após atualizar perfil, próximo passo: ${nextStatus.currentStep}, ainda precisa onboarding: ${nextStatus.needsOnboarding}`
-          );
+            logger.info(
+              `[Livia] Após atualizar perfil, próximo passo: ${nextStatus.currentStep}, ainda precisa onboarding: ${nextStatus.needsOnboarding}`
+            );
+          } catch (statusError) {
+            logger.error(
+              `[Livia] ERRO ao verificar próximo passo para ${normalizedUserId}:`,
+              statusError
+            );
+            logger.error(`[Livia] Stack trace:`, statusError.stack);
+            // Se falhar, assumir que ainda precisa onboarding e continuar no mesmo passo
+            nextStatus = {
+              needsOnboarding: true,
+              currentStep: stepToProcess === "name" ? "nickname" : stepToProcess,
+              profile: onboardingStatus.profile,
+            };
+          }
 
           // Salvar resposta do usuário no histórico
           try {
@@ -306,7 +339,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             );
           }
 
-          if (nextStatus.needsOnboarding) {
+          if (nextStatus && nextStatus.needsOnboarding) {
             // Ainda há mais perguntas
             const nextQuestionData = userOnboarding.getOnboardingQuestion(
               nextStatus.currentStep,
