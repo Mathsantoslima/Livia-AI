@@ -237,40 +237,25 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         // Garantir que sempre há um passo definido
         const currentStep = onboardingStatus.currentStep || "welcome";
 
-        // Se é mensagem de onboarding, processar resposta
-        // Lógica:
-        // - Se currentStep é "welcome" E é novo usuário (sem perfil) → primeira mensagem, enviar welcome
-        // - Se currentStep é "welcome" mas já tem perfil → usuário está respondendo após welcome, tratar como "name"
-        // - Se currentStep NÃO é "welcome" → usuário está respondendo a uma pergunta específica
-        //
-        // IMPORTANTE: Verificar se já existe conversa anterior para detectar se welcome já foi enviado
-        const hasPreviousConversation = await this._hasPreviousConversation(
-          normalizedUserId
-        );
-        const isFirstMessage =
-          currentStep === "welcome" &&
-          !onboardingStatus.profile &&
-          !hasPreviousConversation;
-        const isOnboardingResponse = !isFirstMessage;
+        // SOLUÇÃO DEFINITIVA: Usar onboarding_step do banco como fonte de verdade única
+        // Se currentStep é "welcome", significa que welcome foi enviado e está aguardando resposta
+        // Qualquer mensagem recebida quando currentStep é "welcome" é uma RESPOSTA ao welcome
+        // Portanto, sempre processar como "name"
+        const isWelcomeStep = currentStep === "welcome";
+        const isOnboardingResponse = isWelcomeStep || currentStep !== "welcome";
 
         logger.info(
-          `[Livia] É resposta de onboarding? ${isOnboardingResponse}, passo atual: ${currentStep}, é primeira mensagem: ${isFirstMessage}, tem perfil: ${!!onboardingStatus.profile}, tem conversa anterior: ${hasPreviousConversation}`
+          `[Livia] Processando onboarding. currentStep: ${currentStep}, isWelcomeStep: ${isWelcomeStep}, isOnboardingResponse: ${isOnboardingResponse}`
         );
 
-        if (isOnboardingResponse) {
-          // Determinar qual passo processar
-          // CRITICAL: Se currentStep é "welcome" mas não é primeira mensagem (isOnboardingResponse = true),
-          // significa que está respondendo após welcome → sempre processar como "name"
-          // Isso evita loop quando usuário responde após welcome mas ainda não tem perfil salvo
-          let stepToProcess = currentStep;
+        if (isOnboardingResponse && isWelcomeStep) {
+          // Usuário está respondendo ao welcome → SEMPRE processar como "name"
+          // Isso elimina completamente o loop porque não há ambiguidade
+          const stepToProcess = "name";
 
-          if (currentStep === "welcome") {
-            // Se currentStep é welcome mas não é primeira mensagem, sempre processar como name
-            stepToProcess = "name";
-            logger.info(
-              `[Livia] ⚠️ currentStep é 'welcome' mas não é primeira mensagem. Processando como 'name' para evitar loop.`
-            );
-          }
+          logger.info(
+            `[Livia] ✅ currentStep é 'welcome' → usuário está respondendo. Processando como 'name' (SEM LOOP).`
+          );
 
           logger.info(
             `[Livia] Processando resposta do passo: ${stepToProcess} (currentStep era: ${currentStep}, hasPreviousConversation: ${hasPreviousConversation})`

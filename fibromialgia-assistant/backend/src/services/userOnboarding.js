@@ -260,6 +260,9 @@ class UserOnboarding {
       const updateData = {
         phone: normalizedPhone,
         updated_at: new Date().toISOString(),
+        // CRITICAL: Atualizar onboarding_step para evitar loop
+        // Após processar uma resposta, atualizar o step para o próximo
+        onboarding_step: this._getNextStepAfter(step),
       };
 
       // Processar resposta baseado no passo
