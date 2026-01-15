@@ -434,11 +434,11 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         } else {
           // Primeira mensagem - iniciar onboarding
           logger.info(
-            `[Livia] Iniciando onboarding para usuário ${normalizedUserId}`
+            `[Livia] ✅ Primeira mensagem detectada para usuário ${normalizedUserId} (mensagem: "${message.substring(0, 20)}...")`
           );
 
           const welcomeMessageData = userOnboarding.getOnboardingQuestion(
-            currentStep,
+            "welcome", // Sempre usar "welcome" para primeira mensagem
             onboardingStatus.profile?.name,
             onboardingStatus.profile?.nickname
           );
