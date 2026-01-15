@@ -343,7 +343,7 @@ class UserOnboarding {
 
     switch (step) {
       case "welcome":
-        return `${greetings} 😊\n\nSou a Livia, sua assistente para ajudar com fibromialgia.\n\nAntes de começarmos, preciso conhecer você melhor para poder ajudar de forma personalizada.\n\nQual é o seu nome?`;
+        return `${greetings}\n\nMeu nome é Livia 🌷\n\nSou sua assistente virtual especializada em fibromialgia. Estou aqui para te acompanhar todos os dias, entender sua rotina, seus sintomas e te ajudar a encontrar padrões que possam melhorar seu bem-estar.\n\n✨ Como posso te ajudar:\n• Acompanhar como você está se sentindo\n• Identificar padrões entre sua rotina e sintomas\n• Fazer previsões sobre seus dias (com base no que aprendi sobre você)\n• Enviar mensagens diárias às 8h da manhã com insights personalizados\n• Te ajudar a entender o que pode estar influenciando seus sintomas\n\n💬 Você pode me enviar:\n• Texto: me conte como está se sentindo\n• Áudio: fale comigo naturalmente\n• Imagens: compartilhe algo relevante\n• Documentos: relatórios médicos, anotações\n\n⚠️ Importante: Eu NÃO faço diagnósticos, NÃO prescrevo medicamentos e NÃO substituo consultas médicas. Sou uma companheira que entende fibromialgia e está presente todos os dias.\n\nVamos começar? Antes de tudo, qual é o seu nome? 😊`;
 
       case "name":
         return `${greetings}\n\nPrazer em conhecê-lo(a)! 👋\n\nPara personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?`;
