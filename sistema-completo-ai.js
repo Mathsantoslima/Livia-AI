@@ -34,7 +34,9 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 
 if (!OPENAI_API_KEY || !CLAUDE_API_KEY) {
-  console.error("❌ ERRO: Configure OPENAI_API_KEY e CLAUDE_API_KEY no arquivo .env");
+  console.error(
+    "❌ ERRO: Configure OPENAI_API_KEY e CLAUDE_API_KEY no arquivo .env"
+  );
   process.exit(1);
 }
 
