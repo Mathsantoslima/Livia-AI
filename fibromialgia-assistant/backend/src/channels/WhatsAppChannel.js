@@ -142,7 +142,10 @@ class WhatsAppChannel {
       );
 
       logger.info(
-        `[WhatsApp] Processando mensagem com agente. userId: ${userId}, conteúdo: ${processedContent.substring(0, 50)}...`
+        `[WhatsApp] Processando mensagem com agente. userId: ${userId}, conteúdo: ${processedContent.substring(
+          0,
+          50
+        )}...`
       );
 
       // Processar com o agente (incluindo contexto de mídia)
@@ -161,11 +164,16 @@ class WhatsAppChannel {
       );
 
       logger.info(
-        `[WhatsApp] Resposta recebida do agente: ${response?.text?.substring(0, 50) || "sem texto"}...`
+        `[WhatsApp] Resposta recebida do agente: ${
+          response?.text?.substring(0, 50) || "sem texto"
+        }...`
       );
 
       if (!response || !response.text) {
-        logger.error("[WhatsApp] Resposta do agente está vazia ou inválida:", response);
+        logger.error(
+          "[WhatsApp] Resposta do agente está vazia ou inválida:",
+          response
+        );
         // Enviar mensagem de erro ao invés de lançar exceção
         await this.sendMessage(
           from,

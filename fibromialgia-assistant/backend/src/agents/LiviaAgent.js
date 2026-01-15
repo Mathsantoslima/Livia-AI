@@ -373,21 +373,49 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       context.behavioralContext = this._buildBehavioralContext(userMemory);
 
       // Processar com o AgentBase (que já usa o contexto)
+      logger.info(`[Livia] Chamando AgentBase.processMessage para ${normalizedUserId}`);
+      
       const response = await super.processMessage(
         normalizedUserId,
         message,
         context
       );
 
+      logger.info(`[Livia] Resposta recebida do AgentBase:`, {
+        hasText: !!response?.text,
+        textLength: response?.text?.length || 0,
+        hasChunks: !!response?.chunks,
+        chunksCount: response?.chunks?.length || 0,
+        type: response?.type,
+      });
+
+      if (!response || !response.text) {
+        logger.error("[Livia] Resposta do AgentBase está vazia ou inválida:", response);
+        return {
+          text: "Desculpe, tive um problema ao processar sua mensagem. Pode repetir?",
+          chunks: ["Desculpe, tive um problema ao processar sua mensagem. Pode repetir?"],
+          type: "error",
+        };
+      }
+
       // Pós-processamento específico da Livia
       response.chunks = this._optimizeChunksForLivia(
         response.chunks || [response.text]
       );
 
+      logger.info(`[Livia] Resposta final preparada: ${response.text.substring(0, 50)}...`);
       return response;
     } catch (error) {
       logger.error("[Livia] Erro ao processar mensagem:", error);
-      throw error;
+      logger.error("[Livia] Stack trace:", error.stack);
+      
+      // Retornar resposta de erro ao invés de lançar exceção
+      return {
+        text: "Desculpe, tive um problema técnico. Pode repetir?",
+        chunks: ["Desculpe, tive um problema técnico. Pode repetir?"],
+        type: "error",
+        error: error.message,
+      };
     }
   }
 
