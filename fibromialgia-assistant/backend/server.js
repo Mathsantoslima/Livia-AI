@@ -96,13 +96,22 @@ try {
     });
   });
 
-  // Middleware de tratamento de erros
+  // Middleware de tratamento de erros (deve ser o último)
   try {
-    app.use(ErrorHandler.expressErrorHandler);
+    if (ErrorHandler && ErrorHandler.expressErrorHandler) {
+      app.use(ErrorHandler.expressErrorHandler);
+    } else {
+      throw new Error("ErrorHandler não disponível");
+    }
   } catch (error) {
     console.error("❌ Erro ao configurar ErrorHandler:", error);
     // Fallback para error handler básico
     app.use((err, req, res, next) => {
+      // Ignorar erros de favicon
+      if (req.path === "/favicon.ico") {
+        return res.status(204).end();
+      }
+      
       console.error("Erro na aplicação:", err);
       res.status(500).json({
         error: {
