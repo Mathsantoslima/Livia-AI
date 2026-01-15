@@ -574,7 +574,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
   async generateDailyCheckIn(userId) {
     try {
       const userMemory = await this.memoryManager.getUserMemory(userId);
-      const name = userMemory.name || "querido(a)";
+      const name = userMemory.nickname || userMemory.name || "querido(a)";
 
       const messages = [
         `${name}, antes de encerrar o dia:`,

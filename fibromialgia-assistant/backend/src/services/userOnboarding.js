@@ -200,7 +200,21 @@ class UserOnboarding {
             );
             const name = nameMatch ? nameMatch[1].trim() : answer.trim();
             updateData.name = name;
-            updateData.nickname = name.split(" ")[0]; // Primeiro nome como nickname
+            logger.info(`[Onboarding] Nome extraído: ${name}`);
+          }
+          break;
+
+        case "nickname":
+          if (answer) {
+            // Extrair apelido (pode vir como "me chame de X" ou só "X")
+            const nicknameMatch = answer.match(
+              /(?:me chame de|chame de|pode me chamar de|prefiro|gosto de ser chamado|apelido)\s+([A-Za-zÀ-ÿ\s]+)/i
+            );
+            const nickname = nicknameMatch
+              ? nicknameMatch[1].trim()
+              : answer.trim();
+            updateData.nickname = nickname;
+            logger.info(`[Onboarding] Apelido extraído: ${nickname}`);
           }
           break;
 
@@ -350,7 +364,7 @@ class UserOnboarding {
 
       case "name":
         return `${greetings}\n\nPrazer em conhecê-lo(a)! 👋\n\nE como você prefere ser chamado(a)? (pode ser um apelido, diminutivo ou o próprio nome)`;
-      
+
       case "nickname":
         return `${greetings}\n\nPerfeito! Vou te chamar assim então. 😊\n\nPara personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?`;
 

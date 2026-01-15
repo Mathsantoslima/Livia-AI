@@ -90,7 +90,8 @@ class MemoryManager {
 
       // Construir memória expandida
       const memory = {
-        name: user.name || user.nickname || null,
+        name: user.name || null,
+        nickname: user.nickname || null,
         phone: user.phone,
         preferences: user.preferences || {},
         patterns: (patterns || []).map((p) => ({

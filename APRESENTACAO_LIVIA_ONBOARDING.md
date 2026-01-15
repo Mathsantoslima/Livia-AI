@@ -13,10 +13,12 @@ Quando um usuário novo envia a primeira mensagem, a Livia agora responde com:
 ### Conteúdo da Apresentação:
 
 1. **Apresentação Pessoal**
+
    - "Meu nome é Livia 🌷"
    - Explica que é assistente virtual especializada em fibromialgia
 
 2. **Funcionalidades Explicadas** ✨
+
    - Acompanhar como o usuário está se sentindo
    - Identificar padrões entre rotina e sintomas
    - Fazer previsões sobre os dias (baseado no aprendizado)
@@ -24,12 +26,14 @@ Quando um usuário novo envia a primeira mensagem, a Livia agora responde com:
    - Ajudar a entender o que pode estar influenciando os sintomas
 
 3. **Tipos de Mídia Aceitos** 💬
+
    - Texto: contar como está se sentindo
    - Áudio: falar naturalmente
    - Imagens: compartilhar algo relevante
    - Documentos: relatórios médicos, anotações
 
 4. **Limitações Importantes** ⚠️
+
    - NÃO faz diagnósticos
    - NÃO prescreve medicamentos
    - NÃO substitui consultas médicas
@@ -45,15 +49,18 @@ Quando um usuário novo envia a primeira mensagem, a Livia agora responde com:
 Quando o onboarding está quase completo, a Livia reforça:
 
 1. **Confirmação do Perfil Completo** 🎉
+
    - "Perfeito! Agora já tenho um perfil completo sobre você."
 
 2. **O que será feito com as informações:**
+
    - Entender melhor os padrões
    - Fazer previsões sobre os dias
    - Dar sugestões personalizadas
    - Enviar mensagens diárias às 8h da manhã com insights
 
 3. **Dica Importante** 💡
+
    - "Quanto mais você me contar sobre seu dia a dia, melhor eu consigo te ajudar a identificar o que funciona ou não para você."
 
 4. **Próximos Passos**

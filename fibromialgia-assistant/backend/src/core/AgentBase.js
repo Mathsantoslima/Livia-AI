@@ -198,6 +198,9 @@ class AgentBase {
       if (userMemory.name) {
         prompt += `- Nome: ${userMemory.name}\n`;
       }
+      if (userMemory.nickname) {
+        prompt += `- Apelido/Como prefere ser chamado: ${userMemory.nickname}\n`;
+      }
       if (userMemory.preferences) {
         prompt += `- Preferências: ${JSON.stringify(userMemory.preferences)}\n`;
       }
@@ -209,54 +212,84 @@ class AgentBase {
       if (userMemory.summary) {
         prompt += `- Resumo do histórico: ${userMemory.summary}\n`;
       }
-      
+
       // Rotina e hábitos
-      if (userMemory.dailyRoutine && Object.keys(userMemory.dailyRoutine).length > 0) {
-        prompt += `- Rotina diária: ${JSON.stringify(userMemory.dailyRoutine)}\n`;
+      if (
+        userMemory.dailyRoutine &&
+        Object.keys(userMemory.dailyRoutine).length > 0
+      ) {
+        prompt += `- Rotina diária: ${JSON.stringify(
+          userMemory.dailyRoutine
+        )}\n`;
       }
       if (userMemory.habits && Object.keys(userMemory.habits).length > 0) {
-        prompt += `- Hábitos: sono ${userMemory.habits.sleep?.averageHours || "?"}h, trabalho ${userMemory.habits.work?.hoursPerDay || "?"}h/dia\n`;
+        prompt += `- Hábitos: sono ${
+          userMemory.habits.sleep?.averageHours || "?"
+        }h, trabalho ${userMemory.habits.work?.hoursPerDay || "?"}h/dia\n`;
       }
-      
+
       // Sintomas e gatilhos
-      if (userMemory.recurringSymptoms && userMemory.recurringSymptoms.length > 0) {
-        prompt += `- Sintomas recorrentes: ${userMemory.recurringSymptoms.join(", ")}\n`;
+      if (
+        userMemory.recurringSymptoms &&
+        userMemory.recurringSymptoms.length > 0
+      ) {
+        prompt += `- Sintomas recorrentes: ${userMemory.recurringSymptoms.join(
+          ", "
+        )}\n`;
       }
-      if (userMemory.perceivedTriggers && userMemory.perceivedTriggers.length > 0) {
-        prompt += `- Gatilhos percebidos: ${userMemory.perceivedTriggers.join(", ")}\n`;
+      if (
+        userMemory.perceivedTriggers &&
+        userMemory.perceivedTriggers.length > 0
+      ) {
+        prompt += `- Gatilhos percebidos: ${userMemory.perceivedTriggers.join(
+          ", "
+        )}\n`;
       }
-      
+
       // Estratégias
-      if (userMemory.strategiesThatWorked && userMemory.strategiesThatWorked.length > 0) {
-        prompt += `- Estratégias que funcionaram: ${userMemory.strategiesThatWorked.join(", ")}\n`;
+      if (
+        userMemory.strategiesThatWorked &&
+        userMemory.strategiesThatWorked.length > 0
+      ) {
+        prompt += `- Estratégias que funcionaram: ${userMemory.strategiesThatWorked.join(
+          ", "
+        )}\n`;
       }
-      
+
       prompt += "\n";
     }
-    
+
     // Eventos passados (para referências)
     if (context.pastEvents && context.pastEvents.length > 0) {
       prompt += "EVENTOS RECENTES (para referenciar naturalmente):\n";
       context.pastEvents.forEach((event, i) => {
-        const date = event.timestamp ? new Date(event.timestamp).toLocaleDateString("pt-BR") : "recentemente";
+        const date = event.timestamp
+          ? new Date(event.timestamp).toLocaleDateString("pt-BR")
+          : "recentemente";
         prompt += `${i + 1}. ${date}: ${event.content}\n`;
       });
       prompt += "\n";
     }
-    
+
     // Contexto de rotina
     if (context.routineContext) {
       const routine = context.routineContext;
       if (routine.sleep?.hours || routine.work?.hours) {
         prompt += "CONTEXTO DE ROTINA:\n";
         if (routine.sleep?.hours) {
-          prompt += `- Sono: ${routine.sleep.hours}h/dia, qualidade: ${routine.sleep.quality || "?"}\n`;
+          prompt += `- Sono: ${routine.sleep.hours}h/dia, qualidade: ${
+            routine.sleep.quality || "?"
+          }\n`;
         }
         if (routine.work?.hours) {
-          prompt += `- Trabalho: ${routine.work.hours}h/dia, estresse: ${routine.work.stressLevel || "?"}\n`;
+          prompt += `- Trabalho: ${routine.work.hours}h/dia, estresse: ${
+            routine.work.stressLevel || "?"
+          }\n`;
         }
         if (routine.physicalActivity?.level) {
-          prompt += `- Atividade física: ${routine.physicalActivity.level}, frequência: ${routine.physicalActivity.frequency || "?"}\n`;
+          prompt += `- Atividade física: ${
+            routine.physicalActivity.level
+          }, frequência: ${routine.physicalActivity.frequency || "?"}\n`;
         }
         if (routine.mentalActivity?.level) {
           prompt += `- Esforço mental: ${routine.mentalActivity.level}\n`;
@@ -264,14 +297,17 @@ class AgentBase {
         prompt += "\n";
       }
     }
-    
+
     // Contexto preditivo
     if (context.predictiveContext && context.predictiveContext.today) {
       const today = context.predictiveContext.today;
       if (today.predictions && today.predictions.length > 0) {
-        prompt += "PREVISÕES PARA HOJE (use com probabilidades, não certezas):\n";
+        prompt +=
+          "PREVISÕES PARA HOJE (use com probabilidades, não certezas):\n";
         today.predictions.forEach((pred, i) => {
-          prompt += `${i + 1}. ${pred.message}: ${pred.impact} (probabilidade: ${Math.round(pred.probability * 100)}%)\n`;
+          prompt += `${i + 1}. ${pred.message}: ${
+            pred.impact
+          } (probabilidade: ${Math.round(pred.probability * 100)}%)\n`;
         });
         if (today.suggestions && today.suggestions.length > 0) {
           prompt += `Sugestões: ${today.suggestions.join(", ")}\n`;
