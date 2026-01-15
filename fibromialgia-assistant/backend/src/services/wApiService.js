@@ -74,11 +74,14 @@ async function checkInstanceStatus(instanceId = DEFAULT_INSTANCE_ID) {
       params: { instanceId },
     });
 
-    logger.info(
-      `Status da instância ${instanceId}: ${
-        response.data.status || response.data.state
-      }`
-    );
+    // Log completo da resposta para debug
+    logger.info(`Status da instância ${instanceId}:`, {
+      status: response.data.status || response.data.state,
+      connected: response.data.connected,
+      phone: response.data.phone || response.data.connectedPhone || response.data.number,
+      fullResponse: JSON.stringify(response.data).substring(0, 500),
+    });
+
     return response.data;
   } catch (error) {
     logger.error(`Erro ao verificar status W-API: ${error.message}`, {

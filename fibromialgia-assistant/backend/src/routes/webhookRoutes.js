@@ -353,7 +353,7 @@ router.get("/status", async (req, res) => {
           status: "success",
           data: {
             connection: isConnected ? "connected" : "disconnected",
-            phone: status.connectedPhone || status.phone || null,
+            phone: status.connectedPhone || status.phone || status.number || status.wid?.user || null,
             state:
               status.status ||
               status.state ||
@@ -362,6 +362,16 @@ router.get("/status", async (req, res) => {
             platform: status.platform,
             name: status.name,
             isBusiness: status.isBusiness,
+            // Debug: incluir campos adicionais para diagnóstico
+            ...(process.env.NODE_ENV === "development" && {
+              debug: {
+                hasConnectedPhone: !!status.connectedPhone,
+                hasPhone: !!status.phone,
+                hasNumber: !!status.number,
+                hasWid: !!status.wid,
+                allKeys: Object.keys(status),
+              },
+            }),
           },
           timestamp: new Date().toISOString(),
         });
