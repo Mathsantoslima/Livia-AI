@@ -397,6 +397,10 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           logger.info(
             `[Livia] Iniciando onboarding para usuário ${normalizedUserId}`
           );
+          
+          // Marcar que welcome foi enviado (adicionar ao cache)
+          // IMPORTANTE: Fazer isso ANTES de enviar para evitar race condition
+          this._markWelcomeSent(normalizedUserId);
 
           const welcomeMessageData = userOnboarding.getOnboardingQuestion(
             currentStep,
