@@ -238,14 +238,19 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         const currentStep = onboardingStatus.currentStep || "welcome";
 
         // Se é mensagem de onboarding, processar resposta
-        // Lógica: 
+        // Lógica:
         // - Se currentStep é "welcome" E é novo usuário (sem perfil) → primeira mensagem, enviar welcome
         // - Se currentStep é "welcome" mas já tem perfil → usuário está respondendo após welcome, tratar como "name"
         // - Se currentStep NÃO é "welcome" → usuário está respondendo a uma pergunta específica
-        // 
+        //
         // IMPORTANTE: Verificar se já existe conversa anterior para detectar se welcome já foi enviado
-        const hasPreviousConversation = await this._hasPreviousConversation(normalizedUserId);
-        const isFirstMessage = currentStep === "welcome" && !onboardingStatus.profile && !hasPreviousConversation;
+        const hasPreviousConversation = await this._hasPreviousConversation(
+          normalizedUserId
+        );
+        const isFirstMessage =
+          currentStep === "welcome" &&
+          !onboardingStatus.profile &&
+          !hasPreviousConversation;
         const isOnboardingResponse = !isFirstMessage;
 
         logger.info(
@@ -255,10 +260,11 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         if (isOnboardingResponse) {
           // Determinar qual passo processar
           // Se currentStep é "welcome" mas tem perfil, significa que está respondendo após welcome → processar como "name"
-          const stepToProcess = currentStep === "welcome" && onboardingStatus.profile 
-            ? "name" 
-            : currentStep;
-          
+          const stepToProcess =
+            currentStep === "welcome" && onboardingStatus.profile
+              ? "name"
+              : currentStep;
+
           logger.info(
             `[Livia] Processando resposta do passo: ${stepToProcess} (currentStep era: ${currentStep})`
           );
@@ -274,7 +280,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           const nextStatus = await userOnboarding.checkOnboardingStatus(
             normalizedUserId
           );
-          
+
           logger.info(
             `[Livia] Após atualizar perfil, próximo passo: ${nextStatus.currentStep}, ainda precisa onboarding: ${nextStatus.needsOnboarding}`
           );
@@ -304,7 +310,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             // Verificar se retornou chunks ou texto simples
             let nextQuestion;
             let nextQuestionChunks;
-            
+
             if (nextQuestionData && nextQuestionData.chunks) {
               nextQuestionChunks = nextQuestionData.chunks;
               nextQuestion = nextQuestionChunks.join("\n\n");
@@ -609,6 +615,39 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       emotionalTendency: profile.emotionalTendency || null,
       copingMechanisms: profile.copingMechanisms || [],
     };
+  }
+
+  /**
+   * Verifica se usuário já tem conversa anterior (para detectar se welcome já foi enviado)
+   */
+  async _hasPreviousConversation(userId) {
+    try {
+      const normalizedPhone = userId.replace(/[^\d]/g, "");
+
+      // Buscar usuário pelo phone
+      const { data: user } = await supabase
+        .from("users_livia")
+        .select("id")
+        .eq("phone", normalizedPhone)
+        .single();
+
+      if (!user) {
+        return false;
+      }
+
+      // Verificar se há mensagens anteriores do assistente
+      const { data: messages } = await supabase
+        .from("conversations_livia")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("message_type", "assistant")
+        .limit(1);
+
+      return messages && messages.length > 0;
+    } catch (error) {
+      logger.warn("[Livia] Erro ao verificar conversa anterior:", error);
+      return false; // Em caso de erro, assumir que não tem conversa anterior
+    }
   }
 
   /**
