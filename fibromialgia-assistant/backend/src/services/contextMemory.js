@@ -3,13 +3,8 @@
  * Gerencia o contexto e memórias do usuário para respostas humanizadas
  */
 
-const { createClient } = require("@supabase/supabase-js");
+const { supabase } = require("../config/supabase");
 const logger = require("../utils/logger");
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
 
 class ContextMemory {
   /**
