@@ -636,11 +636,12 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       }
 
       // Verificar se há mensagens anteriores do assistente
+      // O campo pode ser 'sender' ou 'message_type' dependendo da estrutura da tabela
       const { data: messages } = await supabase
         .from("conversations_livia")
         .select("id")
         .eq("user_id", user.id)
-        .eq("message_type", "assistant")
+        .or("sender.eq.assistant,message_type.eq.assistant")
         .limit(1);
 
       return messages && messages.length > 0;
