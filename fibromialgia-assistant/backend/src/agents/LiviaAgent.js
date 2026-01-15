@@ -394,10 +394,6 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             `[Livia] Iniciando onboarding para usuário ${normalizedUserId}`
           );
 
-          // Marcar que welcome foi enviado (adicionar ao cache)
-          // IMPORTANTE: Fazer isso ANTES de enviar para evitar race condition
-          this._markWelcomeSent(normalizedUserId);
-
           const welcomeMessageData = userOnboarding.getOnboardingQuestion(
             currentStep,
             onboardingStatus.profile?.name,
@@ -419,19 +415,28 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             welcomeChunks = [welcomeMessage];
           }
 
-          // Salvar mensagem completa de onboarding no histórico
+          // CRITICAL: Salvar mensagem de welcome no banco ANTES de enviar
+          // Isso garante que na próxima requisição, _hasPreviousConversation detectará que welcome já foi enviado
+          // No Vercel serverless, o banco é a única fonte de verdade
           try {
             await this._saveOnboardingMessage(
               normalizedUserId,
               welcomeMessage,
               "assistant"
             );
+            logger.info(
+              `[Livia] Mensagem de welcome salva no banco para ${normalizedUserId}`
+            );
           } catch (saveError) {
-            logger.warn(
-              "[Livia] Erro ao salvar mensagem de onboarding:",
+            logger.error(
+              "[Livia] ERRO CRÍTICO ao salvar mensagem de welcome:",
               saveError
             );
+            // Continuar mesmo com erro, mas logar como crítico
           }
+
+          // Marcar no cache também (otimização, mas não confiável no serverless)
+          this._markWelcomeSent(normalizedUserId);
 
           return {
             text: welcomeMessage,
@@ -641,57 +646,59 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
   /**
    * Verifica se usuário já tem conversa anterior (para detectar se welcome já foi enviado)
-   * Usa cache em memória + banco de dados para garantir detecção mesmo com erros
+   * PRIMEIRO verifica banco (fonte de verdade), depois cache (otimização)
+   * No Vercel serverless, o banco é a única fonte confiável
    */
   async _hasPreviousConversation(userId) {
     const normalizedPhone = userId.replace(/[^\d]/g, "");
 
-    // Garantir que cache está inicializado (importante no Vercel serverless)
-    this._ensureCacheInitialized();
+    // PRIMEIRO: Verificar no banco (fonte de verdade no serverless)
+    // No Vercel, cada requisição cria nova instância, então cache não persiste
+    try {
+      // Buscar mensagens do assistente pelo phone (não precisa do user_id)
+      // Isso funciona mesmo se o usuário ainda não foi criado
+      const { data: messages, error } = await supabase
+        .from("conversations_livia")
+        .select("id, message_type, content")
+        .eq("phone", normalizedPhone)
+        .eq("message_type", "assistant")
+        .order("sent_at", { ascending: false })
+        .limit(1);
 
-    // PRIMEIRO: Verificar cache em memória (mais rápido e não depende de banco)
+      if (error && error.code !== "PGRST116") {
+        logger.warn(
+          `[Livia] Erro ao verificar conversa anterior no banco:`,
+          error.message
+        );
+      }
+
+      if (messages && messages.length > 0) {
+        logger.info(
+          `[Livia] Welcome já foi enviado (banco): ${normalizedPhone}, mensagens encontradas: ${messages.length}`
+        );
+        // Adicionar ao cache para otimização (mesmo que não persista)
+        this._ensureCacheInitialized();
+        this.welcomeSentCache.set(normalizedPhone, Date.now());
+        return true;
+      }
+    } catch (error) {
+      logger.warn(
+        `[Livia] Erro ao verificar conversa anterior no banco:`,
+        error.message
+      );
+    }
+
+    // SEGUNDO: Verificar cache (otimização, mas não confiável no serverless)
+    this._ensureCacheInitialized();
     if (this.welcomeSentCache.has(normalizedPhone)) {
       logger.info(`[Livia] Welcome já foi enviado (cache): ${normalizedPhone}`);
       return true;
     }
 
-    // SEGUNDO: Tentar verificar no banco (pode falhar, mas tenta)
-    try {
-      // Buscar usuário pelo phone
-      const { data: user } = await supabase
-        .from("users_livia")
-        .select("id")
-        .eq("phone", normalizedPhone)
-        .single();
-
-      if (user) {
-        // Verificar se há mensagens anteriores do assistente
-        // O campo pode ser 'sender' ou 'message_type' dependendo da estrutura da tabela
-        const { data: messages } = await supabase
-          .from("conversations_livia")
-          .select("id")
-          .eq("user_id", user.id)
-          .or("sender.eq.assistant,message_type.eq.assistant")
-          .limit(1);
-
-        if (messages && messages.length > 0) {
-          // Adicionar ao cache para próximas verificações
-          this.welcomeSentCache.set(normalizedPhone, Date.now());
-          logger.info(
-            `[Livia] Welcome já foi enviado (banco): ${normalizedPhone}`
-          );
-          return true;
-        }
-      }
-    } catch (error) {
-      // Erro ao consultar banco - não é crítico, continuar com cache
-      logger.warn(
-        `[Livia] Erro ao verificar conversa anterior no banco (não crítico):`,
-        error.message
-      );
-    }
-
-    // Se não encontrou no cache nem no banco, assumir que não tem conversa anterior
+    // Se não encontrou no banco nem no cache, assumir que não tem conversa anterior
+    logger.info(
+      `[Livia] Nenhuma conversa anterior encontrada para ${normalizedPhone}`
+    );
     return false;
   }
 
