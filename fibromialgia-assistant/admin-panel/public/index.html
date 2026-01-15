@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#7950F2" />
+    <meta
+      name="description"
+      content="Painel Administrativo - Assistente de Fibromialgia"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+    />
+    <title>Assistente de Fibromialgia - Painel Admin</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Inter", "Roboto", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    </style>
+    <script>
+      // Solução definitiva para prevenir os erros do autoPip.js
+      (function () {
+        // 1. Remover completamente o objeto MediaSession
+        if (window.navigator) {
+          Object.defineProperty(window.navigator, "mediaSession", {
+            value: {
+              setActionHandler: function () {
+                return false;
+              },
+              metadata: null,
+            },
+            configurable: true,
+            writable: false,
+          });
+        }
+
+        // 2. Sobrescrever o método createElement para bloquear scripts externos problemáticos
+        const originalCreateElement = document.createElement;
+        document.createElement = function (tagName) {
+          const element = originalCreateElement.call(document, tagName);
+          if (tagName.toLowerCase() === "script") {
+            const originalSetAttribute = element.setAttribute;
+            element.setAttribute = function (name, value) {
+              // Bloquear carregamento de scripts externos desconhecidos
+              if (
+                name === "src" &&
+                value &&
+                (value.includes("autoPip") || value.includes("pip.js"))
+              ) {
+                console.warn("Scripts externos bloqueados:", value);
+                return element;
+              }
+              return originalSetAttribute.call(this, name, value);
+            };
+          }
+          return element;
+        };
+
+        // 3. Capturar e suprimir erros específicos de MediaSession
+        window.addEventListener(
+          "error",
+          function (event) {
+            if (event.message && event.message.includes("MediaSession")) {
+              event.preventDefault();
+              event.stopPropagation();
+              return false;
+            }
+          },
+          true
+        );
+
+        // 4. Redefinir a API MediaSession para funções vazias
+        if (window.navigator && window.navigator.mediaSession) {
+          for (const key in window.navigator.mediaSession) {
+            if (typeof window.navigator.mediaSession[key] === "function") {
+              window.navigator.mediaSession[key] = function () {
+                return false;
+              };
+            }
+          }
+        }
+
+        console.log(
+          "Proteções contra erros de MediaSession aplicadas com sucesso"
+        );
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript
+      >Você precisa habilitar o JavaScript para executar este
+      aplicativo.</noscript
+    >
+    <div id="root"></div>
+  </body>
+</html>
