@@ -292,11 +292,23 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
           if (nextStatus.needsOnboarding) {
             // Ainda há mais perguntas
-            const nextQuestion = userOnboarding.getOnboardingQuestion(
+            const nextQuestionData = userOnboarding.getOnboardingQuestion(
               nextStatus.currentStep,
               nextStatus.profile?.name,
               nextStatus.profile?.nickname
             );
+
+            // Verificar se retornou chunks ou texto simples
+            let nextQuestion;
+            let nextQuestionChunks;
+            
+            if (nextQuestionData && nextQuestionData.chunks) {
+              nextQuestionChunks = nextQuestionData.chunks;
+              nextQuestion = nextQuestionChunks.join("\n\n");
+            } else {
+              nextQuestion = nextQuestionData || "Próxima pergunta...";
+              nextQuestionChunks = [nextQuestion];
+            }
 
             // Salvar próxima pergunta no histórico
             try {
@@ -314,7 +326,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
             return {
               text: nextQuestion,
-              chunks: [nextQuestion],
+              chunks: nextQuestionChunks,
               type: "onboarding",
               onboardingStep: nextStatus.currentStep,
             };
