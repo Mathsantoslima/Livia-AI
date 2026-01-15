@@ -22,6 +22,10 @@ const userOnboarding = require("../services/userOnboarding");
 
 class LiviaAgent extends AgentBase {
   constructor(config = {}) {
+    // Cache em memória para rastrear quais usuários já receberam welcome
+    // Isso evita loop mesmo quando há erro de conexão com banco
+    this.welcomeSentCache = new Map(); // Map<phone, timestamp>
+    
     // Configuração específica da Livia
     const liviaConfig = {
       name: "Livia",
@@ -626,36 +630,68 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
   /**
    * Verifica se usuário já tem conversa anterior (para detectar se welcome já foi enviado)
+   * Usa cache em memória + banco de dados para garantir detecção mesmo com erros
    */
   async _hasPreviousConversation(userId) {
+    const normalizedPhone = userId.replace(/[^\d]/g, "");
+    
+    // PRIMEIRO: Verificar cache em memória (mais rápido e não depende de banco)
+    if (this.welcomeSentCache.has(normalizedPhone)) {
+      logger.info(
+        `[Livia] Welcome já foi enviado (cache): ${normalizedPhone}`
+      );
+      return true;
+    }
+    
+    // SEGUNDO: Tentar verificar no banco (pode falhar, mas tenta)
     try {
-      const normalizedPhone = userId.replace(/[^\d]/g, "");
-
       // Buscar usuário pelo phone
       const { data: user } = await supabase
         .from("users_livia")
         .select("id")
         .eq("phone", normalizedPhone)
         .single();
-
-      if (!user) {
-        return false;
+      
+      if (user) {
+        // Verificar se há mensagens anteriores do assistente
+        // O campo pode ser 'sender' ou 'message_type' dependendo da estrutura da tabela
+        const { data: messages } = await supabase
+          .from("conversations_livia")
+          .select("id")
+          .eq("user_id", user.id)
+          .or("sender.eq.assistant,message_type.eq.assistant")
+          .limit(1);
+        
+        if (messages && messages.length > 0) {
+          // Adicionar ao cache para próximas verificações
+          this.welcomeSentCache.set(normalizedPhone, Date.now());
+          logger.info(
+            `[Livia] Welcome já foi enviado (banco): ${normalizedPhone}`
+          );
+          return true;
+        }
       }
-
-      // Verificar se há mensagens anteriores do assistente
-      // O campo pode ser 'sender' ou 'message_type' dependendo da estrutura da tabela
-      const { data: messages } = await supabase
-        .from("conversations_livia")
-        .select("id")
-        .eq("user_id", user.id)
-        .or("sender.eq.assistant,message_type.eq.assistant")
-        .limit(1);
-
-      return messages && messages.length > 0;
     } catch (error) {
-      logger.warn("[Livia] Erro ao verificar conversa anterior:", error);
-      return false; // Em caso de erro, assumir que não tem conversa anterior
+      // Erro ao consultar banco - não é crítico, continuar com cache
+      logger.warn(
+        `[Livia] Erro ao verificar conversa anterior no banco (não crítico):`,
+        error.message
+      );
     }
+    
+    // Se não encontrou no cache nem no banco, assumir que não tem conversa anterior
+    return false;
+  }
+  
+  /**
+   * Marca que welcome foi enviado para um usuário (adiciona ao cache)
+   */
+  _markWelcomeSent(userId) {
+    const normalizedPhone = userId.replace(/[^\d]/g, "");
+    this.welcomeSentCache.set(normalizedPhone, Date.now());
+    logger.info(
+      `[Livia] Welcome marcado como enviado (cache): ${normalizedPhone}`
+    );
   }
 
   /**
