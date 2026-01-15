@@ -361,7 +361,7 @@ class UserOnboarding {
         return `Ótimo! Já estou conhecendo você melhor. 🎯\n\nPor último, me conte:\n- Quais são os principais sintomas de fibromialgia que você sente? (ex: dor, fadiga, problemas de sono)\n- Há algo que você percebe que piora seus sintomas? (gatilhos)`;
 
       case "symptoms":
-        return `Perfeito! Agora já tenho um perfil completo sobre você. 🎉\n\nVou usar essas informações para:\n- Entender melhor seus padrões\n- Fazer previsões sobre seus dias\n- Dar sugestões personalizadas\n\nPode me contar como você está se sentindo hoje?`;
+        return `Perfeito! Agora já tenho um perfil completo sobre você. 🎉\n\nVou usar essas informações para:\n• Entender melhor seus padrões\n• Fazer previsões sobre seus dias\n• Dar sugestões personalizadas\n• Te enviar mensagens diárias às 8h da manhã com insights\n\n💡 Dica: Quanto mais você me contar sobre seu dia a dia, melhor eu consigo te ajudar a identificar o que funciona ou não para você.\n\nAgora pode me contar como você está se sentindo hoje? Ou se preferir, pode me enviar um áudio, uma imagem ou qualquer coisa que quiser compartilhar! 😊`;
 
       default:
         return "Obrigada pelas informações! Como posso ajudar você hoje?";
