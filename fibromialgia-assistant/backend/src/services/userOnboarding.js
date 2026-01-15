@@ -84,9 +84,22 @@ class UserOnboarding {
 
       if (!profileComplete) {
         // Perfil incompleto - precisa continuar onboarding
-        const currentStep = this._getNextOnboardingStep(user);
+        // PRIORIDADE: usar onboarding_step do banco se existir (reflete o fluxo real)
+        // FALLBACK: calcular baseado nos dados faltantes
+        let currentStep = user.onboarding_step;
+
+        if (!currentStep) {
+          // Se não há step salvo, calcular baseado nos dados
+          currentStep = this._getNextOnboardingStep(user);
+        }
+
         logger.info(
-          `[Onboarding] Usuário ${normalizedPhone} precisa continuar onboarding. Próximo passo: ${currentStep}`
+          `[Onboarding] Usuário ${normalizedPhone} precisa continuar onboarding. ` +
+            `Step do banco: ${
+              user.onboarding_step
+            }, Calculado: ${this._getNextOnboardingStep(
+              user
+            )}, Usando: ${currentStep}`
         );
         return {
           needsOnboarding: true,
@@ -108,9 +121,10 @@ class UserOnboarding {
       };
     } catch (error) {
       logger.error("[Onboarding] Erro ao verificar status:", error);
+      // Em caso de erro, assumir que precisa de onboarding para segurança
       return {
-        needsOnboarding: false,
-        currentStep: null,
+        needsOnboarding: true,
+        currentStep: "welcome",
         profile: null,
         error: error.message,
       };
@@ -565,70 +579,86 @@ class UserOnboarding {
    */
   getOnboardingQuestion(step, userName = null, userNickname = null) {
     // Usar nickname se disponível, senão usar name, senão genérico
-    const greetings = userNickname
-      ? `Olá, ${userNickname}!`
-      : userName
-      ? `Olá, ${userName}!`
-      : "Olá!";
+    const displayName = userNickname || userName;
+    const greetings = displayName ? `${displayName}!` : "";
+
+    logger.info(
+      `[Onboarding] getOnboardingQuestion chamada: step=${step}, userName=${userName}, userNickname=${userNickname}`
+    );
 
     switch (step) {
       case "welcome":
-        // Retornar mensagem em blocos para envio sequencial
+        // PRIMEIRO CONTATO: Apresentar Livia e perguntar o nome
         return {
           chunks: [
-            `${greetings}\n\nMeu nome é Livia 🌷`,
+            `Olá!\n\nMeu nome é Livia 🌷`,
             `Sou sua assistente virtual especializada em fibromialgia. Estou aqui para te acompanhar todos os dias, entender sua rotina, seus sintomas e te ajudar a encontrar padrões que possam melhorar seu bem-estar.`,
-            `✨ Como posso te ajudar:\n• Acompanhar como você está se sentindo\n• Identificar padrões entre sua rotina e sintomas\n• Fazer previsões sobre seus dias (com base no que aprendi sobre você)\n• Enviar mensagens diárias às 8h da manhã com insights personalizados\n• Te ajudar a entender o que pode estar influenciando seus sintomas`,
-            `💬 Você pode me enviar:\n• Texto: me conte como está se sentindo\n• Áudio: fale comigo naturalmente\n• Imagens: compartilhe algo relevante\n• Documentos: relatórios médicos, anotações`,
-            `⚠️ Importante: Eu NÃO faço diagnósticos, NÃO prescrevo medicamentos e NÃO substituo consultas médicas. Sou uma companheira que entende fibromialgia e está presente todos os dias.`,
-            `Vamos começar? Antes de tudo, qual é o seu nome? 😊`,
+            `✨ Como posso te ajudar:\n• Acompanhar como você está se sentindo\n• Identificar padrões entre sua rotina e sintomas\n• Fazer previsões sobre seus dias\n• Enviar mensagens diárias com insights personalizados`,
+            `💬 Você pode me enviar texto, áudio, imagens ou documentos.`,
+            `⚠️ Importante: Eu NÃO faço diagnósticos e NÃO prescrevo medicamentos. Sou uma companheira que entende fibromialgia.`,
+            `Vamos começar? Qual é o seu nome? 😊`,
           ],
           isChunked: true,
         };
 
       case "name":
-        return {
-          chunks: [
-            `${greetings}\n\nPrazer em conhecê-lo(a)! 👋`,
-            `E como você prefere ser chamado(a)? (pode ser um apelido, diminutivo ou o próprio nome)`,
-          ],
-          isChunked: true,
-        };
+        // FALLBACK: Usuário existe mas sem nome (pedir nome sem intro completa)
+        return `Olá! 👋 Sou a Livia. Para começarmos, qual é o seu nome?`;
 
       case "nickname":
+        // APÓS RECEBER O NOME: Agradecer e perguntar apelido
         return {
           chunks: [
-            `${greetings}\n\nPerfeito! Vou te chamar assim então. 😊`,
-            `Para personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?`,
+            `Prazer em te conhecer, ${userName || ""}! 👋`,
+            `E como você prefere ser chamado(a)? Pode ser um apelido, diminutivo, ou o próprio nome mesmo.`,
           ],
           isChunked: true,
         };
 
       case "basic_info":
-        return `Entendi! Obrigada por compartilhar. 💙\n\nAgora, me fale sobre seu sono:\n- Quantas horas você costuma dormir por noite?\n- Como você avalia a qualidade do seu sono? (bom, médio, ruim)`;
-
-      case "sleep_habits":
-        return `Obrigada! 📝\n\nE sobre seu trabalho:\n- Você trabalha? Quantas horas por dia?\n- Como você avalia o nível de estresse no trabalho? (baixo, médio, alto)`;
-
-      case "work_habits":
-        return `Perfeito! ✨\n\nMe conte sobre sua rotina diária:\n- Que horas você costuma acordar e dormir?\n- Você faz alguma atividade física? Qual e com que frequência?`;
-
-      case "daily_routine":
-        return `Ótimo! Já estou conhecendo você melhor. 🎯\n\nPor último, me conte:\n- Quais são os principais sintomas de fibromialgia que você sente? (ex: dor, fadiga, problemas de sono)\n- Há algo que você percebe que piora seus sintomas? (gatilhos)`;
-
-      case "symptoms":
+        // APÓS RECEBER O APELIDO: Confirmar e perguntar idade/gênero
         return {
           chunks: [
-            `Perfeito! Agora já tenho um perfil completo sobre você. 🎉`,
-            `Vou usar essas informações para:\n• Entender melhor seus padrões\n• Fazer previsões sobre seus dias\n• Dar sugestões personalizadas\n• Te enviar mensagens diárias às 8h da manhã com insights`,
-            `💡 Dica: Quanto mais você me contar sobre seu dia a dia, melhor eu consigo te ajudar a identificar o que funciona ou não para você.`,
-            `Agora pode me contar como você está se sentindo hoje? Ou se preferir, pode me enviar um áudio, uma imagem ou qualquer coisa que quiser compartilhar! 😊`,
+            `${displayName}, perfeito! Vou te chamar assim. 😊`,
+            `Me conta um pouco mais sobre você:\n- Quantos anos você tem?\n- Qual seu gênero?`,
+          ],
+          isChunked: true,
+        };
+
+      case "sleep_habits":
+        // APÓS RECEBER INFO BÁSICA: Perguntar sobre sono
+        return `Entendi, ${displayName}! 💙\n\nAgora sobre seu sono:\n- Quantas horas você costuma dormir?\n- Como avalia a qualidade? (bom, médio, ruim)`;
+
+      case "work_habits":
+        // APÓS RECEBER SOBRE SONO: Perguntar sobre trabalho
+        return `Obrigada! 📝\n\nE sobre seu trabalho, ${displayName}:\n- Você trabalha? Quantas horas por dia?\n- Nível de estresse? (baixo, médio, alto)`;
+
+      case "daily_routine":
+        // APÓS RECEBER SOBRE TRABALHO: Perguntar rotina
+        return `Perfeito! ✨\n\nMe conta sua rotina:\n- Que horas acorda e dorme?\n- Faz atividade física? Qual?`;
+
+      case "symptoms":
+        // APÓS RECEBER ROTINA: Perguntar sintomas
+        return `Ótimo, ${displayName}! Já estou te conhecendo melhor. 🎯\n\nPor último:\n- Quais sintomas de fibromialgia você mais sente?\n- Percebe algo que piora seus sintomas? (gatilhos)`;
+
+      case "complete":
+        // APÓS RECEBER SINTOMAS: Finalizar onboarding
+        return {
+          chunks: [
+            `${displayName}, agora tenho um perfil completo sobre você! 🎉`,
+            `Vou usar essas informações para:\n• Entender seus padrões\n• Fazer previsões sobre seus dias\n• Dar sugestões personalizadas`,
+            `💡 Quanto mais você me contar sobre seu dia a dia, melhor consigo te ajudar!`,
+            `Como você está se sentindo hoje? 😊`,
           ],
           isChunked: true,
         };
 
       default:
-        return "Obrigada pelas informações! Como posso ajudar você hoje?";
+        // Caso inesperado - continuar conversa normalmente
+        logger.warn(`[Onboarding] Step desconhecido: ${step}`);
+        return displayName
+          ? `${displayName}, como posso te ajudar hoje?`
+          : "Como posso te ajudar hoje?";
     }
   }
 

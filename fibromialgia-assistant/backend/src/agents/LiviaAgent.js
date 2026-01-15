@@ -259,14 +259,16 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
         // Se a mensagem é um cumprimento genérico ("Oi", "Olá") E não há perfil, é primeira mensagem
         // Caso contrário, é uma resposta ao onboarding
         const normalizedMessage = message.trim().toLowerCase();
-        const isGenericGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|hey|hi)$/i.test(
-          normalizedMessage
-        );
+        const isGenericGreeting =
+          /^(oi|olá|ola|bom dia|boa tarde|boa noite|hey|hi)$/i.test(
+            normalizedMessage
+          );
         const hasProfile = !!onboardingStatus.profile;
         // Se currentStep é null (erro no banco) ou "welcome", pode ser primeira mensagem
         const canBeFirstMessage = !currentStep || currentStep === "welcome";
         // É primeira mensagem se: é cumprimento genérico E não tem perfil E pode ser primeira mensagem
-        const isFirstMessage = isGenericGreeting && !hasProfile && canBeFirstMessage;
+        const isFirstMessage =
+          isGenericGreeting && !hasProfile && canBeFirstMessage;
 
         // Se NÃO é primeira mensagem, é uma resposta ao onboarding
         const isOnboardingResponse = !isFirstMessage;
@@ -414,7 +416,7 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
             // Onboarding completo
             await userOnboarding.completeOnboarding(normalizedUserId);
             const completionMessageData = userOnboarding.getOnboardingQuestion(
-              "symptoms",
+              "complete",
               nextStatus.profile?.name,
               nextStatus.profile?.nickname
             );
@@ -455,7 +457,10 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
         } else {
           // Primeira mensagem - iniciar onboarding
           logger.info(
-            `[Livia] ✅ Primeira mensagem detectada para usuário ${normalizedUserId} (mensagem: "${message.substring(0, 20)}...")`
+            `[Livia] ✅ Primeira mensagem detectada para usuário ${normalizedUserId} (mensagem: "${message.substring(
+              0,
+              20
+            )}...")`
           );
 
           const welcomeMessageData = userOnboarding.getOnboardingQuestion(
@@ -542,15 +547,19 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
       // USAR CONTEXTO PRÉ-CARREGADO SE DISPONÍVEL (evita chamadas duplicadas)
       let fullContext = context.preloadedContext;
       let contextSummary = context.preloadedContextSummary;
-      
+
       if (!fullContext) {
-        logger.info(`[Livia] Carregando contexto completo para ${normalizedUserId}`);
+        logger.info(
+          `[Livia] Carregando contexto completo para ${normalizedUserId}`
+        );
         fullContext = await contextMemory.loadUserContext(normalizedUserId);
         contextSummary = contextMemory.getContextSummary(fullContext);
       } else {
-        logger.info(`[Livia] Usando contexto pré-carregado para ${normalizedUserId}`);
+        logger.info(
+          `[Livia] Usando contexto pré-carregado para ${normalizedUserId}`
+        );
       }
-      
+
       logger.info(`[Livia] Contexto carregado:`, {
         hasName: contextSummary.hasName,
         name: contextSummary.name,
@@ -562,7 +571,7 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
 
       // Construir prompt de contexto humanizado
       const contextPrompt = contextMemory.buildContextPrompt(fullContext);
-      
+
       // Carregar memória do MemoryManager também (compatibilidade)
       const userMemory = await this.memoryManager.getUserMemory(
         normalizedUserId
@@ -594,7 +603,7 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
       context.conversationContext = conversationContext;
       context.globalInsights = globalMemory.insights;
       context.predictiveContext = predictiveContext;
-      
+
       // NOVO: Contexto humanizado
       context.fullContext = fullContext;
       context.contextSummary = contextSummary;
@@ -621,7 +630,7 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
         message,
         context
       );
-      
+
       // APÓS A RESPOSTA: Extrair e salvar memórias automaticamente
       try {
         await contextMemory.extractAndSaveMemories(
@@ -629,10 +638,14 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
           message,
           response.text
         );
-        
+
         // Extrair níveis de dor, energia e humor da mensagem
         const levels = contextMemory.extractLevels(message);
-        if (levels.pain_level !== null || levels.energy_level !== null || levels.mood_level !== null) {
+        if (
+          levels.pain_level !== null ||
+          levels.energy_level !== null ||
+          levels.mood_level !== null
+        ) {
           logger.info(`[Livia] Níveis extraídos:`, levels);
         }
       } catch (memError) {
