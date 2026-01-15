@@ -166,11 +166,18 @@ class WhatsAppChannel {
 
       if (!response || !response.text) {
         logger.error("[WhatsApp] Resposta do agente está vazia ou inválida:", response);
-        throw new Error("Resposta do agente está vazia");
+        // Enviar mensagem de erro ao invés de lançar exceção
+        await this.sendMessage(
+          from,
+          "Desculpe, tive um problema ao processar sua mensagem. Pode repetir?"
+        );
+        return;
       }
 
       // Enviar resposta
+      logger.info(`[WhatsApp] Enviando resposta para ${from}`);
       await this.sendResponse(from, response);
+      logger.info(`[WhatsApp] Resposta enviada com sucesso para ${from}`);
     } catch (error) {
       logger.error("[WhatsApp] Erro ao processar mensagem:", error);
 
