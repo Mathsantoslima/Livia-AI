@@ -254,15 +254,18 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         const isOnboardingResponse = !isFirstMessage;
 
         logger.info(
-          `[Livia] É resposta de onboarding? ${isOnboardingResponse}, passo atual: ${currentStep}, é primeira mensagem: ${isFirstMessage}, tem perfil: ${!!onboardingStatus.profile}`
+          `[Livia] É resposta de onboarding? ${isOnboardingResponse}, passo atual: ${currentStep}, é primeira mensagem: ${isFirstMessage}, tem perfil: ${!!onboardingStatus.profile}, tem conversa anterior: ${hasPreviousConversation}`
         );
 
         if (isOnboardingResponse) {
           // Determinar qual passo processar
-          // Se currentStep é "welcome" mas tem perfil, significa que está respondendo após welcome → processar como "name"
+          // CRITICAL: Se currentStep é "welcome" mas já tem conversa anterior, significa que está respondendo após welcome → processar como "name"
+          // Isso evita loop quando usuário responde após welcome mas ainda não tem perfil salvo
           const stepToProcess =
-            currentStep === "welcome" && onboardingStatus.profile
+            currentStep === "welcome" && (onboardingStatus.profile || hasPreviousConversation)
               ? "name"
+              : currentStep === "welcome" 
+              ? "name" // Se currentStep é welcome mas não é primeira mensagem, sempre processar como name
               : currentStep;
 
           logger.info(

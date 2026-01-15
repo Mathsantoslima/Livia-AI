@@ -221,12 +221,41 @@ class UserOnboarding {
         `[Onboarding] Atualizando perfil para userId: ${normalizedPhone}, passo: ${step}`
       );
 
-      // Buscar usuário existente
-      const { data: existingUser } = await supabase
+      // Buscar ou criar usuário
+      let existingUser;
+      const { data: userData, error: userError } = await supabase
         .from("users_livia")
         .select("*")
         .eq("phone", normalizedPhone)
         .single();
+
+      if (userError && userError.code === "PGRST116") {
+        // Usuário não existe, criar novo
+        logger.info(
+          `[Onboarding] Usuário ${normalizedPhone} não existe, criando novo usuário`
+        );
+        const { data: newUser, error: createError } = await supabase
+          .from("users_livia")
+          .insert({
+            phone: normalizedPhone,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          logger.error("[Onboarding] Erro ao criar usuário:", createError);
+          throw createError;
+        }
+
+        existingUser = newUser;
+      } else if (userError) {
+        logger.error("[Onboarding] Erro ao buscar usuário:", userError);
+        throw userError;
+      } else {
+        existingUser = userData;
+      }
 
       const updateData = {
         phone: normalizedPhone,
