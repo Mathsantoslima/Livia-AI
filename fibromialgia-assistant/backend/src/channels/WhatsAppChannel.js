@@ -149,17 +149,6 @@ class WhatsAppChannel {
           processedContent = body || `Recebi uma ${mediaType}, mas não consegui acessá-la. Pode descrever o que enviou?`;
         }
       }
-          logger.error(
-            `[WhatsApp] Erro ao processar mídia ${mediaType}:`,
-            mediaError
-          );
-          // Continuar com texto se houver, ou enviar mensagem de erro
-          if (!processedContent) {
-            processedContent =
-              "Recebi sua mídia, mas tive dificuldade para processá-la. Pode descrever o que enviou?";
-          }
-        }
-      }
 
       // VALIDAÇÃO CRÍTICA: Se é áudio mas não foi transcrito, tentar novamente ou avisar
       if (originalMediaType === "audio" && !processedContent) {
