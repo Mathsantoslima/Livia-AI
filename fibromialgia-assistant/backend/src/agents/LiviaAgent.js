@@ -242,11 +242,12 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         // Qualquer mensagem recebida quando currentStep é "welcome" é uma RESPOSTA ao welcome
         // Portanto, SEMPRE processar como "name" (sem verificar mensagens anteriores)
         const isWelcomeStep = currentStep === "welcome";
-        
+
         // Se currentStep é "welcome", é uma resposta ao welcome → processar como "name"
         // Se currentStep NÃO é "welcome" e não é null, é uma resposta a outra pergunta → processar normalmente
         // Se currentStep é null ou undefined, é primeira mensagem → enviar welcome
-        const isOnboardingResponse = isWelcomeStep || (currentStep && currentStep !== "welcome");
+        const isOnboardingResponse =
+          isWelcomeStep || (currentStep && currentStep !== "welcome");
 
         logger.info(
           `[Livia] Processando onboarding. currentStep: ${currentStep}, isWelcomeStep: ${isWelcomeStep}, isOnboardingResponse: ${isOnboardingResponse}`
@@ -255,7 +256,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         if (isOnboardingResponse) {
           // Determinar qual passo processar
           let stepToProcess = currentStep;
-          
+
           // CRITICAL: Se currentStep é "welcome", usuário está respondendo → SEMPRE processar como "name"
           if (isWelcomeStep) {
             stepToProcess = "name";
