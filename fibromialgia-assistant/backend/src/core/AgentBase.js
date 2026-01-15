@@ -586,6 +586,40 @@ class AgentBase {
     if (this.memoryManager) {
       await this.memoryManager.saveConversationContext(userId, context);
     }
+
+    // CRITICAL: Também salvar usando contextMemory para garantir histórico completo
+    // Isso garante que o histórico seja acessível via contextMemory.getRecentHistory
+    try {
+      const contextMemory = require("../services/contextMemory");
+      
+      // Salvar mensagem do usuário
+      await contextMemory.saveConversationMessage(
+        userId,
+        userMessage,
+        "user",
+        {
+          pain_level: agentResponse.metadata?.pain_level,
+          energy_level: agentResponse.metadata?.energy_level,
+          mood_level: agentResponse.metadata?.mood_level,
+        }
+      );
+
+      // Salvar resposta do assistente
+      await contextMemory.saveConversationMessage(
+        userId,
+        agentResponse.text,
+        "assistant",
+        {
+          ai_model: agentResponse.metadata?.model,
+          processing_time: agentResponse.metadata?.processing_time,
+        }
+      );
+    } catch (ctxError) {
+      logger.warn(
+        `[AgentBase] Erro ao salvar via contextMemory: ${ctxError.message}`
+      );
+      // Não falhar se contextMemory não estiver disponível
+    }
   }
 
   /**

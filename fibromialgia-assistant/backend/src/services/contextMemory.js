@@ -103,8 +103,8 @@ class ContextMemory {
       const { data, error } = await supabase
         .from("conversations_livia")
         .select("*")
-        .eq("user_id", phone)
-        .order("created_at", { ascending: false })
+        .eq("phone", phone)
+        .order("sent_at", { ascending: false })
         .limit(limit);
 
       if (error) {
@@ -112,8 +112,15 @@ class ContextMemory {
         return [];
       }
 
-      // Inverter para ordem cronológica
-      return (data || []).reverse();
+      // Converter para formato de histórico e inverter para ordem cronológica
+      const history = (data || []).reverse().map((msg) => ({
+        role: msg.message_type === "assistant" ? "assistant" : "user",
+        content: msg.content,
+        sent_at: msg.sent_at,
+        media_type: msg.media_type,
+      }));
+
+      return history;
     } catch (error) {
       logger.error("[ContextMemory] Erro ao buscar histórico:", error);
       return [];
@@ -128,9 +135,9 @@ class ContextMemory {
       const { data, error } = await supabase
         .from("conversations_livia")
         .select("*")
-        .eq("user_id", phone)
-        .eq("role", "assistant")
-        .order("created_at", { ascending: false })
+        .eq("phone", phone)
+        .eq("message_type", "assistant")
+        .order("sent_at", { ascending: false })
         .limit(1)
         .single();
 
@@ -141,7 +148,7 @@ class ContextMemory {
       if (!data) return null;
 
       // Calcular tempo desde última interação
-      const lastTime = new Date(data.created_at);
+      const lastTime = new Date(data.sent_at || data.created_at);
       const now = new Date();
       const diffMs = now - lastTime;
       const diffMinutes = Math.floor(diffMs / 60000);
@@ -163,6 +170,7 @@ class ContextMemory {
 
       return {
         ...data,
+        content: data.content,
         timeAgo,
         diffMinutes,
         diffHours,
@@ -338,6 +346,68 @@ class ContextMemory {
       return { success: true };
     } catch (error) {
       logger.error("[ContextMemory] Erro ao salvar evento de sintoma:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Salva uma mensagem de conversa no histórico
+   * @param {string} phone - Telefone do usuário
+   * @param {string} content - Conteúdo da mensagem
+   * @param {string} messageType - "user" ou "assistant"
+   * @param {Object} metadata - Metadados adicionais
+   */
+  async saveConversationMessage(phone, content, messageType, metadata = {}) {
+    const normalizedPhone = phone.replace(/[^\d]/g, "");
+
+    try {
+      // Buscar user_id se disponível
+      let userId = null;
+      const { data: user } = await supabase
+        .from("users_livia")
+        .select("id")
+        .eq("phone", normalizedPhone)
+        .single();
+
+      if (user) {
+        userId = user.id;
+      }
+
+      const messageData = {
+        user_id: userId,
+        phone: normalizedPhone,
+        content,
+        message_type: messageType,
+        sent_at: new Date().toISOString(),
+        metadata: {
+          ...metadata,
+          saved_by: "contextMemory",
+        },
+      };
+
+      // Extrair níveis se disponíveis
+      if (metadata.pain_level !== undefined) {
+        messageData.pain_level = metadata.pain_level;
+      }
+      if (metadata.energy_level !== undefined) {
+        messageData.energy_level = metadata.energy_level;
+      }
+      if (metadata.mood_level !== undefined) {
+        messageData.mood_level = metadata.mood_level;
+      }
+
+      const { error } = await supabase
+        .from("conversations_livia")
+        .insert(messageData);
+
+      if (error) throw error;
+
+      logger.info(
+        `[ContextMemory] Mensagem salva: ${messageType} de ${normalizedPhone}`
+      );
+      return { success: true };
+    } catch (error) {
+      logger.error("[ContextMemory] Erro ao salvar mensagem:", error);
       return { success: false, error: error.message };
     }
   }
@@ -592,7 +662,7 @@ class ContextMemory {
   }
 
   /**
-   * Constrói o prompt de contexto para o agente
+   * Constrói o prompt de contexto para o agente (HUMANIZADO conforme plano)
    */
   buildContextPrompt(context) {
     const parts = [];
@@ -606,53 +676,84 @@ class ContextMemory {
         context.profile.nickname ||
         context.profile.name;
       if (name) {
-        parts.push(`👤 USUÁRIO: ${name}`);
+        parts.push(`Nome: ${name}`);
       }
 
-      if (context.profile.main_symptoms) {
-        parts.push(`📋 Sintomas principais: ${context.profile.main_symptoms}`);
+      if (context.profile.main_symptoms && context.profile.main_symptoms.length > 0) {
+        parts.push(`Sintomas principais: ${context.profile.main_symptoms.join(", ")}`);
       }
 
       if (context.profile.habits) {
         const habits = context.profile.habits;
         if (habits.sleep) {
-          parts.push(`😴 Sono: ${JSON.stringify(habits.sleep)}`);
+          const sleepInfo = [];
+          if (habits.sleep.hours) sleepInfo.push(`${habits.sleep.hours}h`);
+          if (habits.sleep.quality) sleepInfo.push(`qualidade ${habits.sleep.quality}/10`);
+          if (sleepInfo.length > 0) {
+            parts.push(`Sono: ${sleepInfo.join(", ")}`);
+          }
         }
         if (habits.work) {
-          parts.push(`💼 Trabalho: ${JSON.stringify(habits.work)}`);
+          const workInfo = [];
+          if (habits.work.hours) workInfo.push(`${habits.work.hours}h`);
+          if (habits.work.stress_level) workInfo.push(`estresse ${habits.work.stress_level}/10`);
+          if (workInfo.length > 0) {
+            parts.push(`Trabalho: ${workInfo.join(", ")}`);
+          }
         }
       }
     }
 
-    // Última interação
+    // Última interação (formato humanizado)
     if (context.lastInteraction) {
-      parts.push(`\n⏰ ÚLTIMA CONVERSA: ${context.lastInteraction.timeAgo}`);
+      parts.push(`\nÚltima conversa: ${context.lastInteraction.timeAgo}`);
       if (context.lastInteraction.content) {
-        const lastContent = context.lastInteraction.content.substring(0, 200);
-        parts.push(`📝 Último assunto: "${lastContent}..."`);
+        const lastContent = context.lastInteraction.content.substring(0, 150);
+        parts.push(`O que conversamos: "${lastContent}${context.lastInteraction.content.length > 150 ? "..." : ""}"`);
       }
+    } else {
+      parts.push(`\nÚltima conversa: primeira vez aqui`);
     }
 
-    // Memórias importantes
+    // Memórias importantes (formato humanizado)
     if (context.memories && context.memories.length > 0) {
-      parts.push("\n🧠 MEMÓRIAS RELEVANTES:");
-      const recentMemories = context.memories.slice(0, 10);
+      parts.push("\nMemórias importantes:");
+      const recentMemories = context.memories.slice(0, 8);
       for (const mem of recentMemories) {
-        const value = mem.value || JSON.stringify(mem.value_json);
-        parts.push(`- ${mem.key}: ${value}`);
+        let value = mem.value;
+        if (!value && mem.value_json) {
+          // Tentar extrair informação útil do JSON
+          if (typeof mem.value_json === 'object') {
+            if (mem.value_json.symptoms) {
+              value = `sintomas: ${Array.isArray(mem.value_json.symptoms) ? mem.value_json.symptoms.join(", ") : mem.value_json.symptoms}`;
+            } else if (mem.value_json.triggers) {
+              value = `gatilhos: ${Array.isArray(mem.value_json.triggers) ? mem.value_json.triggers.join(", ") : mem.value_json.triggers}`;
+            } else {
+              value = JSON.stringify(mem.value_json).substring(0, 80);
+            }
+          } else {
+            value = String(mem.value_json).substring(0, 80);
+          }
+        }
+        if (value) {
+          // Formatar chave de forma mais legível
+          const keyFormatted = mem.key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+          parts.push(`- ${keyFormatted}: ${value.substring(0, 100)}${value.length > 100 ? "..." : ""}`);
+        }
       }
     }
 
-    // Histórico recente
+    // Histórico recente (formato humanizado - CRÍTICO para continuidade)
     if (context.history && context.history.length > 0) {
-      parts.push("\n💬 HISTÓRICO RECENTE:");
+      parts.push("\nHistórico recente:");
+      // Pegar últimas 6 mensagens para contexto
       for (const msg of context.history.slice(-6)) {
-        const role = msg.role === "user" ? "Usuário" : "Livia";
-        const content = msg.content.substring(0, 100);
-        parts.push(
-          `${role}: ${content}${msg.content.length > 100 ? "..." : ""}`
-        );
+        const role = msg.role === "assistant" ? "Livia" : "Usuário";
+        const content = msg.content.substring(0, 120);
+        parts.push(`${role}: "${content}${msg.content.length > 120 ? "..." : ""}"`);
       }
+    } else {
+      parts.push("\nHistórico recente: (primeira conversa)");
     }
 
     return parts.join("\n");

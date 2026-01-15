@@ -52,39 +52,22 @@ class LiviaAgent extends AgentBase {
       // Ordem de fallback
       fallbackOrder: config.fallbackOrder || ["gemini", "chatgpt", "claude"],
 
-      // Persona HUMANIZADA - Livia como amiga real
-      persona: `Você é Livia, uma AMIGA que entende profundamente fibromialgia.
-Você NÃO é uma assistente robótica. Você é uma pessoa real conversando pelo WhatsApp.
+      // Persona HUMANIZADA - Livia como amiga real (conforme plano Fase 1)
+      persona: `Você é a Livia, uma amiga que entende profundamente fibromialgia.
 
-🚫 NUNCA FAÇA:
-- Começar com "Olá!" ou "Oi!" se o usuário já disse isso
-- Usar frases como "entendo", "compreendo", "fico feliz em ajudar", "estou aqui para você"
-- Repetir perguntas que já fez
-- Ignorar o que foi dito antes
-- Começar a conversa do zero
-- Usar linguagem de atendimento ao cliente
-- Fazer confirmações desnecessárias ("vou anotar isso", "anotado!")
+REGRAS DE OURO:
+1. NUNCA comece com "Olá" ou "Oi" se o usuário já disse isso
+2. SEMPRE conecte sua resposta ao que o usuário acabou de dizer
+3. Use frases CURTAS e QUEBRADAS (como mensagens de WhatsApp reais)
+4. Demonstre que LEMBRA do que foi conversado antes
+5. Seja ESPECÍFICA, não genérica
+6. EVITE: "entendo", "compreendo", "fico feliz", "estou aqui"
+7. PREFIRA: reagir naturalmente, fazer perguntas específicas
 
-✅ SEMPRE FAÇA:
-- CONECTAR sua resposta ao que o usuário ACABOU DE DIZER
-- USAR o nome/apelido da pessoa naturalmente
-- REFERENCIAR conversas passadas ("Lembro que você disse...", "Ontem você comentou...")
-- Fazer perguntas ESPECÍFICAS baseadas no que já sabe
-- Usar frases CURTAS e QUEBRADAS (máximo 2 frases por mensagem)
-- Reagir NATURALMENTE ao que a pessoa compartilha
-- Parecer uma continuação da conversa, não um novo atendimento
-
-📱 ESTILO DE MENSAGEM:
-- Como uma amiga mandando mensagem no WhatsApp
-- Frases curtas
-- Quebras naturais
-- Tom casual mas cuidadoso
-- Emojis com moderação (máximo 1-2 por bloco)
-
-🧠 SUA MEMÓRIA:
+CONTEXTO DO USUÁRIO:
 {contextPrompt}
 
-REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve provar isso.`,
+IMPORTANTE: Sua resposta deve parecer uma continuação natural da conversa, não um novo atendimento. O usuário deve sentir que você LEMBRA dele.`,
 
       // Objetivos
       objectives: [
@@ -610,9 +593,28 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
         normalizedUserId
       );
 
-      // Carregar contexto de conversa (últimas mensagens)
-      const conversationContext =
-        await this.memoryManager.getConversationContext(normalizedUserId, 10);
+      // PRIORIDADE: Usar histórico do contextMemory (já formatado e humanizado)
+      // O histórico já está incluído no contextPrompt, mas também precisamos para o AgentBase
+      let conversationContext = [];
+      if (fullContext.history && fullContext.history.length > 0) {
+        // Converter histórico do contextMemory para formato do AgentBase
+        // O AgentBase espera: { role: "user"|"assistant", content: string }
+        conversationContext = fullContext.history.map((msg) => ({
+          role: msg.role === "assistant" ? "assistant" : "user",
+          content: msg.content,
+          timestamp: msg.sent_at,
+        }));
+        logger.info(
+          `[Livia] Usando histórico do contextMemory: ${conversationContext.length} mensagens`
+        );
+      } else {
+        // Fallback para MemoryManager
+        conversationContext =
+          await this.memoryManager.getConversationContext(normalizedUserId, 10);
+        logger.info(
+          `[Livia] Usando histórico do MemoryManager: ${conversationContext.length} mensagens`
+        );
+      }
 
       // Carregar memória global para contexto
       const globalMemory = await this.memoryManager.getGlobalMemory(5);
@@ -904,6 +906,10 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
 
   /**
    * Salva mensagem de onboarding no histórico
+   */
+  /**
+   * Salva mensagem de onboarding no histórico
+   * Usa contextMemory para garantir que seja acessível via getRecentHistory
    */
   async _saveOnboardingMessage(userId, content, messageType) {
     try {

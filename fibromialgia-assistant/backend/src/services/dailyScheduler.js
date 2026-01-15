@@ -2,7 +2,7 @@
  * =========================================
  * AGENDADOR DE MENSAGENS DIÁRIAS
  * =========================================
- * 
+ *
  * Envia mensagens automáticas às 08:00 AM
  * para cada usuário ativo
  */
@@ -33,28 +33,38 @@ class DailyScheduler {
     // Agendar para 08:00 AM todos os dias (horário de São Paulo)
     // Formato: segundo minuto hora dia mês dia-da-semana
     // 0 0 8 * * * = 08:00:00 todos os dias
-    this.job = cron.schedule("0 0 8 * * *", async () => {
-      await this.sendDailyMessages();
-    }, {
-      timezone: "America/Sao_Paulo",
-    });
+    this.job = cron.schedule(
+      "0 0 8 * * *",
+      async () => {
+        await this.sendDailyMessages();
+      },
+      {
+        timezone: "America/Sao_Paulo",
+      }
+    );
 
     // Agendar aprendizado global para 02:00 AM (horário de menor uso)
     // Executa diariamente para atualizar padrões coletivos
-    this.globalLearningJob = cron.schedule("0 0 2 * * *", async () => {
-      try {
-        logger.info("[DailyScheduler] Iniciando aprendizado global...");
-        await globalLearning.updateGlobalPatterns();
-        logger.info("[DailyScheduler] Aprendizado global concluído");
-      } catch (error) {
-        logger.error("[DailyScheduler] Erro no aprendizado global:", error);
+    this.globalLearningJob = cron.schedule(
+      "0 0 2 * * *",
+      async () => {
+        try {
+          logger.info("[DailyScheduler] Iniciando aprendizado global...");
+          await globalLearning.updateGlobalPatterns();
+          logger.info("[DailyScheduler] Aprendizado global concluído");
+        } catch (error) {
+          logger.error("[DailyScheduler] Erro no aprendizado global:", error);
+        }
+      },
+      {
+        timezone: "America/Sao_Paulo",
       }
-    }, {
-      timezone: "America/Sao_Paulo",
-    });
+    );
 
     this.isRunning = true;
-    logger.info("[DailyScheduler] Iniciado - mensagens às 08:00 AM (horário de São Paulo)");
+    logger.info(
+      "[DailyScheduler] Iniciado - mensagens às 08:00 AM (horário de São Paulo)"
+    );
   }
 
   /**
@@ -98,7 +108,9 @@ class DailyScheduler {
         return;
       }
 
-      logger.info(`[DailyScheduler] Enviando mensagens para ${users.length} usuários`);
+      logger.info(
+        `[DailyScheduler] Enviando mensagens para ${users.length} usuários`
+      );
 
       // Obter infraestrutura de IA
       const aiInfra = getAIInfrastructure();
@@ -149,7 +161,11 @@ class DailyScheduler {
       }
 
       // Gerar mensagem personalizada usando o agente
-      const message = await this.generateDailyMessage(user, analysis, liviaAgent);
+      const message = await this.generateDailyMessage(
+        user,
+        analysis,
+        liviaAgent
+      );
 
       // Enviar via WhatsApp
       await whatsappChannel.sendMessage(user.phone, message);
@@ -188,9 +204,14 @@ class DailyScheduler {
       // Carregar contexto completo do usuário
       const fullContext = await contextMemory.loadUserContext(user.phone);
       const contextSummary = contextMemory.getContextSummary(fullContext);
-      
+
       // CRITICAL: Usar preferred_name primeiro (nome que o usuário PREFERE ser chamado)
-      const name = contextSummary.name || user.preferred_name || user.nickname || user.name || "querido(a)";
+      const name =
+        contextSummary.name ||
+        user.preferred_name ||
+        user.nickname ||
+        user.name ||
+        "querido(a)";
       const today = analysis.today;
       const yesterday = analysis.yesterday;
 
@@ -206,8 +227,10 @@ class DailyScheduler {
       };
 
       // Construir prompt de contexto se disponível
-      const contextPrompt = fullContext ? contextMemory.buildContextPrompt(fullContext) : "";
-      
+      const contextPrompt = fullContext
+        ? contextMemory.buildContextPrompt(fullContext)
+        : "";
+
       // Usar o agente para gerar mensagem mais natural
       const prompt = `Você é a Livia, uma AMIGA que entende profundamente fibromialgia.
 
@@ -219,7 +242,11 @@ ${contextPrompt}
 Com base no dia de ontem de ${name}:
 ${this._formatAnalysisForPrompt(yesterday, today)}
 
-${contextSummary.lastInteractionTime ? `Última conversa: ${contextSummary.lastInteractionTime}` : ""}
+${
+  contextSummary.lastInteractionTime
+    ? `Última conversa: ${contextSummary.lastInteractionTime}`
+    : ""
+}
 
 Gere uma mensagem matinal (08:00 AM) que:
 1. Use o nome/apelido do usuário naturalmente
@@ -242,13 +269,22 @@ Gere uma mensagem matinal (08:00 AM) que:
 
 IMPORTANTE: Não diagnostique, não prescreva medicamentos.`;
 
-      const response = await liviaAgent.processMessage(user.id, prompt, context);
+      const response = await liviaAgent.processMessage(
+        user.id,
+        prompt,
+        context
+      );
 
-      return response.text || response.chunks?.join("\n") || this._generateFallbackMessage(name, today);
+      return (
+        response.text ||
+        response.chunks?.join("\n") ||
+        this._generateFallbackMessage(name, today)
+      );
     } catch (error) {
       logger.error("[DailyScheduler] Erro ao gerar mensagem:", error);
       // CRITICAL: Usar preferred_name primeiro
-      const fallbackName = user.preferred_name || user.nickname || user.name || "querido(a)";
+      const fallbackName =
+        user.preferred_name || user.nickname || user.name || "querido(a)";
       return this._generateFallbackMessage(fallbackName, analysis.today);
     }
   }
@@ -260,13 +296,17 @@ IMPORTANTE: Não diagnostique, não prescreva medicamentos.`;
     let text = "";
 
     if (yesterday.routine) {
-      text += `Rotina de ontem: sono ${yesterday.routine.sleep?.hours || "?"}h, qualidade ${yesterday.routine.sleep?.quality || "?"}\n`;
+      text += `Rotina de ontem: sono ${
+        yesterday.routine.sleep?.hours || "?"
+      }h, qualidade ${yesterday.routine.sleep?.quality || "?"}\n`;
     }
 
     if (today.predictions && today.predictions.length > 0) {
       text += `Previsões para hoje:\n`;
       today.predictions.forEach((pred) => {
-        text += `- ${pred.message}: ${pred.impact} (probabilidade: ${Math.round(pred.probability * 100)}%)\n`;
+        text += `- ${pred.message}: ${pred.impact} (probabilidade: ${Math.round(
+          pred.probability * 100
+        )}%)\n`;
       });
     }
 
@@ -290,7 +330,9 @@ IMPORTANTE: Não diagnostique, não prescreva medicamentos.`;
     if (today.predictions && today.predictions.length > 0) {
       const firstPred = today.predictions[0];
       messages.push("");
-      messages.push(`Com base no seu dia de ontem, ${firstPred.message.toLowerCase()}.`);
+      messages.push(
+        `Com base no seu dia de ontem, ${firstPred.message.toLowerCase()}.`
+      );
       messages.push(firstPred.impact);
     }
 
