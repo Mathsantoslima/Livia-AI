@@ -13,6 +13,7 @@
 const logger = require("../utils/logger");
 const wApiService = require("../services/wApiService");
 const mediaProcessor = require("../services/mediaProcessor");
+const contextMemory = require("../services/contextMemory");
 
 class WhatsAppChannel {
   constructor(agent, whatsappClient = null, config = {}) {
@@ -222,6 +223,22 @@ class WhatsAppChannel {
         )}...`
       );
 
+      // CARREGAR CONTEXTO COMPLETO DO USUÁRIO ANTES DE PROCESSAR
+      let userContext = null;
+      let contextSummary = null;
+      try {
+        userContext = await contextMemory.loadUserContext(userId);
+        contextSummary = contextMemory.getContextSummary(userContext);
+        logger.info(`[WhatsApp] Contexto carregado para ${userId}:`, {
+          hasName: contextSummary.hasName,
+          name: contextSummary.name,
+          isReturningUser: contextSummary.isReturningUser,
+          lastInteraction: contextSummary.lastInteractionTime,
+        });
+      } catch (ctxError) {
+        logger.warn(`[WhatsApp] Erro ao carregar contexto: ${ctxError.message}`);
+      }
+
       // Processar com o agente (incluindo contexto de mídia)
       // O LiviaAgent já verifica onboarding internamente
       // Passar tipo de mídia original para que possa responder no mesmo formato
@@ -236,8 +253,24 @@ class WhatsAppChannel {
           mediaContext,
           originalBody: body, // Manter texto original se houver
           userSentAudio: originalMediaType === "audio", // Flag para indicar que usuário enviou áudio
+          // Contexto pré-carregado
+          preloadedContext: userContext,
+          preloadedContextSummary: contextSummary,
         }
       );
+      
+      // APÓS RESPOSTA: Extrair e salvar memórias automaticamente
+      if (response && response.text && response.type !== "onboarding") {
+        try {
+          await contextMemory.extractAndSaveMemories(
+            userId,
+            processedContent,
+            response.text
+          );
+        } catch (memError) {
+          logger.warn(`[WhatsApp] Erro ao extrair memórias: ${memError.message}`);
+        }
+      }
 
       logger.info(
         `[WhatsApp] Resposta recebida do agente: ${

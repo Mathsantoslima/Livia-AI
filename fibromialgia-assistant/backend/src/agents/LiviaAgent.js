@@ -539,11 +539,17 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
       }
 
       // Usuário já tem perfil completo - processar normalmente
-      // CARREGAR CONTEXTO COMPLETO usando contextMemory
-      logger.info(`[Livia] Carregando contexto completo para ${normalizedUserId}`);
+      // USAR CONTEXTO PRÉ-CARREGADO SE DISPONÍVEL (evita chamadas duplicadas)
+      let fullContext = context.preloadedContext;
+      let contextSummary = context.preloadedContextSummary;
       
-      const fullContext = await contextMemory.loadUserContext(normalizedUserId);
-      const contextSummary = contextMemory.getContextSummary(fullContext);
+      if (!fullContext) {
+        logger.info(`[Livia] Carregando contexto completo para ${normalizedUserId}`);
+        fullContext = await contextMemory.loadUserContext(normalizedUserId);
+        contextSummary = contextMemory.getContextSummary(fullContext);
+      } else {
+        logger.info(`[Livia] Usando contexto pré-carregado para ${normalizedUserId}`);
+      }
       
       logger.info(`[Livia] Contexto carregado:`, {
         hasName: contextSummary.hasName,
