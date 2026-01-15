@@ -103,7 +103,7 @@ try {
     if (req.path === "/favicon.ico") {
       return res.status(204).end();
     }
-    
+
     res.status(404).json({
       error: {
         code: 404,
@@ -128,7 +128,7 @@ try {
       if (req.path === "/favicon.ico") {
         return res.status(204).end();
       }
-      
+
       console.error("Erro na aplicação:", err);
       res.status(500).json({
         error: {

@@ -3,10 +3,13 @@
 ## 🔍 Conceito Básico
 
 ### **O que é um Webhook?**
+
 Um **webhook** é uma URL que recebe notificações automáticas quando algo acontece. É como um "botão de notificação" que outra aplicação chama quando precisa te avisar de algo.
 
 ### **O que é W-API?**
+
 **W-API** é um serviço que conecta seu sistema ao WhatsApp. Ele gerencia a conexão com o WhatsApp e envia notificações para seu backend quando:
+
 - 📩 Alguém envia uma mensagem para seu número
 - ✅ A conexão muda de status
 - 🔄 O QR Code é gerado
@@ -42,11 +45,13 @@ Um **webhook** é uma URL que recebe notificações automáticas quando algo aco
 ## 🔗 URL do Webhook
 
 ### **Para Produção (Vercel):**
+
 ```
 https://livia-ai.vercel.app/webhook/w-api
 ```
 
 ### **Para Desenvolvimento Local (com ngrok):**
+
 ```
 https://xxxxx.ngrok-free.app/webhook/w-api
 ```
@@ -107,6 +112,7 @@ O endpoint que recebe o webhook está em:
 **Rota:** `POST /webhook/w-api`
 
 **O que faz:**
+
 1. Recebe os dados da mensagem
 2. Extrai o número do remetente e o texto
 3. Processa com a Livia (IA)
@@ -158,12 +164,14 @@ W_API_INSTANCE_ID=fibromialgia
 ## 📝 Resumo
 
 **Webhook W-API é:**
+
 - ✅ Uma URL que recebe notificações do W-API
 - ✅ Endpoint: `POST /webhook/w-api`
 - ✅ Recebe mensagens do WhatsApp
 - ✅ Processa com IA e envia resposta
 
 **URL para configurar no painel W-API:**
+
 ```
 https://livia-ai.vercel.app/webhook/w-api
 ```
@@ -173,11 +181,13 @@ https://livia-ai.vercel.app/webhook/w-api
 ## 🆘 Problemas Comuns
 
 ### **"Webhook não está recebendo mensagens"**
+
 - ✅ Verifique se a URL está correta no painel W-API
 - ✅ Verifique se o método é `POST`
 - ✅ Verifique os logs do Vercel
 
 ### **"Mensagens chegam mas não são processadas"**
+
 - ✅ Verifique as variáveis de ambiente (W_API_TOKEN, etc.)
 - ✅ Verifique os logs do Vercel para erros
 - ✅ Teste o endpoint diretamente com `curl`

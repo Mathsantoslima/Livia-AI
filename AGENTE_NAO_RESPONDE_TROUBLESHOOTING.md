@@ -26,6 +26,7 @@ Você envia mensagem para o WhatsApp, mas a Livia não responde.
 No Vercel Dashboard → Settings → Environment Variables:
 
 **Obrigatórias:**
+
 ```
 W_API_URL=https://api.w-api.app/v1
 W_API_TOKEN=seu_token_w_api
@@ -33,6 +34,7 @@ W_API_INSTANCE_ID=fibromialgia
 ```
 
 **Para IA funcionar:**
+
 ```
 GOOGLE_AI_API_KEY=sua_chave_google_ai
 # OU
@@ -42,6 +44,7 @@ CLAUDE_API_KEY=sua_chave_claude
 ```
 
 **Outras importantes:**
+
 ```
 SUPABASE_URL=sua_url_supabase
 SUPABASE_KEY=sua_chave_supabase
@@ -64,6 +67,7 @@ JWT_SECRET=seu_segredo_jwt
    - `[WhatsApp] Erro ao enviar`
 
 **O que procurar:**
+
 - ✅ Se aparecer `[W-API Webhook] Evento recebido` → Webhook está funcionando
 - ❌ Se NÃO aparecer → Webhook não está configurado ou W-API não está chamando
 - ✅ Se aparecer `[WhatsApp] Mensagem recebida` → Mensagem chegou
@@ -86,6 +90,7 @@ curl -X POST https://livia-ai.vercel.app/webhook/w-api \
 ```
 
 **Resposta esperada:**
+
 ```json
 {
   "success": true,
@@ -104,6 +109,7 @@ curl https://livia-ai.vercel.app/api/webhook/status
 ```
 
 **Resposta esperada:**
+
 ```json
 {
   "status": "success",
@@ -124,10 +130,12 @@ Se retornar `"connection": "disconnected"`, a instância não está conectada.
 ### **Problema 1: Webhook não recebe mensagens**
 
 **Sintomas:**
+
 - Nenhum log `[W-API Webhook] Evento recebido` aparece
 - Mensagem enviada mas nada acontece
 
 **Soluções:**
+
 1. ✅ Verificar URL do webhook no painel W-API
 2. ✅ Verificar se o método é `POST`
 3. ✅ Verificar se os eventos estão marcados
@@ -138,10 +146,12 @@ Se retornar `"connection": "disconnected"`, a instância não está conectada.
 ### **Problema 2: Mensagem chega mas não é processada**
 
 **Sintomas:**
+
 - Log `[W-API Webhook] Evento recebido` aparece
 - Mas não aparece `[WhatsApp] Mensagem recebida`
 
 **Soluções:**
+
 1. ✅ Verificar formato do payload no log
 2. ✅ Verificar se `sender.id` e `text` estão presentes
 3. ✅ Verificar se `fromMe === true` (mensagem enviada por nós)
@@ -151,11 +161,13 @@ Se retornar `"connection": "disconnected"`, a instância não está conectada.
 ### **Problema 3: Mensagem processada mas não envia resposta**
 
 **Sintomas:**
+
 - Log `[WhatsApp] Mensagem recebida` aparece
 - Log `[Livia] Processando mensagem` aparece
 - Mas não aparece `[WhatsApp] Enviado para`
 
 **Soluções:**
+
 1. ✅ Verificar variáveis `W_API_TOKEN` e `W_API_INSTANCE_ID`
 2. ✅ Verificar se a instância W-API está conectada
 3. ✅ Verificar logs de erro: `[WhatsApp] Erro ao enviar via W-API`
@@ -165,10 +177,12 @@ Se retornar `"connection": "disconnected"`, a instância não está conectada.
 ### **Problema 4: Erro ao processar com IA**
 
 **Sintomas:**
+
 - Log `[WhatsApp] Erro ao processar mensagem` aparece
 - Mensagem de erro: "Todos os providers falharam"
 
 **Soluções:**
+
 1. ✅ Configurar pelo menos um provider de IA:
    - `GOOGLE_AI_API_KEY` (recomendado)
    - `OPENAI_API_KEY`
@@ -181,10 +195,12 @@ Se retornar `"connection": "disconnected"`, a instância não está conectada.
 ### **Problema 5: Instância W-API desconectada**
 
 **Sintomas:**
+
 - Status retorna `"connection": "disconnected"`
 - Erro ao enviar mensagem
 
 **Soluções:**
+
 1. ✅ Acessar painel W-API
 2. ✅ Verificar se a instância está conectada
 3. ✅ Reconectar se necessário (gerar novo QR Code)
@@ -194,18 +210,23 @@ Se retornar `"connection": "disconnected"`, a instância não está conectada.
 ## 🧪 Teste Completo Passo a Passo
 
 ### **1. Verificar se webhook está acessível:**
+
 ```bash
 curl https://livia-ai.vercel.app/webhook/w-api
 ```
+
 Deve retornar: `{"status":"ok",...}`
 
 ### **2. Verificar status da instância:**
+
 ```bash
 curl https://livia-ai.vercel.app/api/webhook/status
 ```
+
 Deve retornar: `{"connection":"connected",...}`
 
 ### **3. Testar webhook com mensagem simulada:**
+
 ```bash
 curl -X POST https://livia-ai.vercel.app/webhook/w-api \
   -H "Content-Type: application/json" \
@@ -217,10 +238,12 @@ curl -X POST https://livia-ai.vercel.app/webhook/w-api \
 ```
 
 ### **4. Verificar logs do Vercel:**
+
 - Deployments → Function Logs
 - Procure por erros ou mensagens de processamento
 
 ### **5. Enviar mensagem real:**
+
 - Envie mensagem para `(11) 93618-8540`
 - Aguarde alguns segundos
 - Verifique logs novamente
