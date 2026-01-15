@@ -504,6 +504,32 @@ class UserOnboarding {
   }
 
   /**
+   * Determina o próximo passo após processar uma resposta
+   * @param {string} currentStep - Passo atual
+   * @returns {string} Próximo passo
+   */
+  _getNextStepAfter(step) {
+    const stepOrder = [
+      "welcome",
+      "name",
+      "nickname",
+      "basic_info",
+      "sleep_habits",
+      "work_habits",
+      "daily_routine",
+      "symptoms",
+      "complete",
+    ];
+
+    const currentIndex = stepOrder.indexOf(step);
+    if (currentIndex === -1 || currentIndex >= stepOrder.length - 1) {
+      return "complete";
+    }
+
+    return stepOrder[currentIndex + 1];
+  }
+
+  /**
    * Marca onboarding como completo
    */
   async completeOnboarding(userId) {
