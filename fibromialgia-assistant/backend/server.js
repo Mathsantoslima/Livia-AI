@@ -62,6 +62,11 @@ try {
         version: process.env.npm_package_version || "1.0.0",
       });
     });
+
+    // Rota para favicon.ico (evita erro 500)
+    app.get("/favicon.ico", (req, res) => {
+      res.status(204).end();
+    });
   } catch (error) {
     console.error("❌ Erro ao configurar rotas:", error);
     // Criar rota de erro para não quebrar completamente
@@ -75,8 +80,13 @@ try {
     });
   }
 
-  // Handler para rotas não encontradas
+  // Handler para rotas não encontradas (deve vir antes do error handler)
   app.use((req, res, next) => {
+    // Ignorar favicon.ico silenciosamente
+    if (req.path === "/favicon.ico") {
+      return res.status(204).end();
+    }
+    
     res.status(404).json({
       error: {
         code: 404,
