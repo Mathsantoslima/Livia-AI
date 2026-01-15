@@ -81,9 +81,10 @@ class DailyScheduler {
       logger.info("[DailyScheduler] Iniciando envio de mensagens diárias...");
 
       // Buscar todos os usuários ativos
+      // CRITICAL: Incluir preferred_name para usar o nome que o usuário prefere
       const { data: users, error } = await supabase
         .from("users_livia")
-        .select("id, phone, name, nickname, timezone")
+        .select("id, phone, name, nickname, preferred_name, timezone")
         .eq("status", "active")
         .not("phone", "is", null);
 
@@ -188,8 +189,8 @@ class DailyScheduler {
       const fullContext = await contextMemory.loadUserContext(user.phone);
       const contextSummary = contextMemory.getContextSummary(fullContext);
       
-      // Usar apelido se disponível, senão nome
-      const name = contextSummary.name || user.nickname || user.name || "querido(a)";
+      // CRITICAL: Usar preferred_name primeiro (nome que o usuário PREFERE ser chamado)
+      const name = contextSummary.name || user.preferred_name || user.nickname || user.name || "querido(a)";
       const today = analysis.today;
       const yesterday = analysis.yesterday;
 
@@ -246,7 +247,9 @@ IMPORTANTE: Não diagnostique, não prescreva medicamentos.`;
       return response.text || response.chunks?.join("\n") || this._generateFallbackMessage(name, today);
     } catch (error) {
       logger.error("[DailyScheduler] Erro ao gerar mensagem:", error);
-      return this._generateFallbackMessage(user.name || user.nickname || "querido(a)", analysis.today);
+      // CRITICAL: Usar preferred_name primeiro
+      const fallbackName = user.preferred_name || user.nickname || user.name || "querido(a)";
+      return this._generateFallbackMessage(fallbackName, analysis.today);
     }
   }
 

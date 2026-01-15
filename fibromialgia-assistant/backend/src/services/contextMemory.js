@@ -14,7 +14,7 @@ class ContextMemory {
    */
   async loadUserContext(phone) {
     const normalizedPhone = phone.replace(/[^\d]/g, "");
-    
+
     try {
       const [profile, memories, history, lastInteraction] = await Promise.all([
         this.getUserProfile(normalizedPhone),
@@ -76,7 +76,10 @@ class ContextMemory {
         .from("user_memory_items")
         .select("*")
         .eq("phone", phone)
-        .or("valid_to.is.null,valid_to.gte." + new Date().toISOString().split("T")[0])
+        .or(
+          "valid_to.is.null,valid_to.gte." +
+            new Date().toISOString().split("T")[0]
+        )
         .order("created_at", { ascending: false })
         .limit(limit);
 
@@ -178,7 +181,7 @@ class ContextMemory {
    */
   async saveMemory(phone, key, value, options = {}) {
     const normalizedPhone = phone.replace(/[^\d]/g, "");
-    
+
     try {
       const memoryData = {
         phone: normalizedPhone,
@@ -347,7 +350,10 @@ class ContextMemory {
     const symptomPatterns = [
       { pattern: /dor|doendo|dói/i, type: "dor" },
       { pattern: /cansa(do|da|ço)|fadiga|exaust/i, type: "fadiga" },
-      { pattern: /não (dormi|consegui dormir)|insônia|sono ruim/i, type: "insonia" },
+      {
+        pattern: /não (dormi|consegui dormir)|insônia|sono ruim/i,
+        type: "insonia",
+      },
       { pattern: /rigidez|trav(ado|ada)|rígid/i, type: "rigidez" },
       { pattern: /névoa|confus|esquec/i, type: "nevoa_mental" },
       { pattern: /ansie(dade|oso|osa)/i, type: "ansiedade" },
@@ -358,15 +364,15 @@ class ContextMemory {
 
     // Partes do corpo
     const bodyAreas = {
-      "braço": "braco",
-      "perna": "perna",
-      "costa": "costas",
-      "lombar": "lombar",
-      "pescoço": "pescoco",
-      "ombro": "ombro",
-      "joelho": "joelho",
-      "mão": "mao",
-      "pé": "pe",
+      braço: "braco",
+      perna: "perna",
+      costa: "costas",
+      lombar: "lombar",
+      pescoço: "pescoco",
+      ombro: "ombro",
+      joelho: "joelho",
+      mão: "mao",
+      pé: "pe",
       "corpo todo": "corpo_todo",
     };
 
@@ -405,14 +411,23 @@ class ContextMemory {
   _extractTriggers(message) {
     const triggers = [];
     const triggerPatterns = [
-      { pattern: /computador|pc|notebook|tela/i, trigger: "trabalho_computador" },
+      {
+        pattern: /computador|pc|notebook|tela/i,
+        trigger: "trabalho_computador",
+      },
       { pattern: /estresse|estressad/i, trigger: "estresse" },
       { pattern: /dormi (mal|pouco)|não dormi/i, trigger: "sono_ruim" },
       { pattern: /trabalh(ei|o) (muito|demais)/i, trigger: "excesso_trabalho" },
-      { pattern: /exercício|academia|caminhada|corri/i, trigger: "atividade_fisica" },
+      {
+        pattern: /exercício|academia|caminhada|corri/i,
+        trigger: "atividade_fisica",
+      },
       { pattern: /frio|gelad/i, trigger: "frio" },
       { pattern: /calor|quente/i, trigger: "calor" },
-      { pattern: /comi (mal|besteira)|alimentação/i, trigger: "alimentacao_ruim" },
+      {
+        pattern: /comi (mal|besteira)|alimentação/i,
+        trigger: "alimentacao_ruim",
+      },
       { pattern: /brig(uei|a)|discussão|conflito/i, trigger: "conflito" },
       { pattern: /ansiedad|nervos/i, trigger: "ansiedade" },
     ];
@@ -493,8 +508,9 @@ class ContextMemory {
     const messageLower = message.toLowerCase();
 
     // Extrair nível de dor
-    const painMatch = message.match(/dor\s*(?:de|nivel|nível)?\s*(\d+)/i) ||
-                      message.match(/(\d+)\s*(?:de dor|\/10)/i);
+    const painMatch =
+      message.match(/dor\s*(?:de|nivel|nível)?\s*(\d+)/i) ||
+      message.match(/(\d+)\s*(?:de dor|\/10)/i);
     if (painMatch) {
       levels.pain_level = Math.min(10, parseInt(painMatch[1]));
     } else if (/muita dor|dor forte|dor intensa/i.test(messageLower)) {
@@ -513,7 +529,9 @@ class ContextMemory {
       levels.energy_level = Math.min(10, parseInt(energyMatch[1]));
     } else if (/muita energia|energizado|disposto/i.test(messageLower)) {
       levels.energy_level = 8;
-    } else if (/pouca energia|cansado|exausto|esgotado|fadiga/i.test(messageLower)) {
+    } else if (
+      /pouca energia|cansado|exausto|esgotado|fadiga/i.test(messageLower)
+    ) {
       levels.energy_level = 3;
     } else if (/sem energia|zero energia/i.test(messageLower)) {
       levels.energy_level = 1;
@@ -539,7 +557,7 @@ class ContextMemory {
   async updateConversationLevels(conversationId, levels) {
     try {
       const updateData = {};
-      
+
       if (levels.pain_level !== null) {
         updateData.pain_level = levels.pain_level;
       }
@@ -581,7 +599,12 @@ class ContextMemory {
 
     // Perfil do usuário
     if (context.profile) {
-      const name = context.profile.nickname || context.profile.name;
+      // CRITICAL: Usar preferred_name primeiro (nome que o usuário PREFERE ser chamado)
+      // Fallback: nickname, depois name
+      const name =
+        context.profile.preferred_name ||
+        context.profile.nickname ||
+        context.profile.name;
       if (name) {
         parts.push(`👤 USUÁRIO: ${name}`);
       }
@@ -626,7 +649,9 @@ class ContextMemory {
       for (const msg of context.history.slice(-6)) {
         const role = msg.role === "user" ? "Usuário" : "Livia";
         const content = msg.content.substring(0, 100);
-        parts.push(`${role}: ${content}${msg.content.length > 100 ? "..." : ""}`);
+        parts.push(
+          `${role}: ${content}${msg.content.length > 100 ? "..." : ""}`
+        );
       }
     }
 
@@ -637,16 +662,24 @@ class ContextMemory {
    * Gera um resumo do contexto para decisões rápidas
    */
   getContextSummary(context) {
+    // CRITICAL: Usar preferred_name primeiro (nome que o usuário PREFERE ser chamado)
+    const preferredName =
+      context.profile?.preferred_name ||
+      context.profile?.nickname ||
+      context.profile?.name;
     return {
-      hasName: !!(context.profile?.name || context.profile?.nickname),
-      name: context.profile?.nickname || context.profile?.name || null,
+      hasName: !!preferredName,
+      name: preferredName || null,
       isNewUser: !context.hasContext,
-      isReturningUser: context.lastInteraction && context.lastInteraction.diffDays > 0,
+      isReturningUser:
+        context.lastInteraction && context.lastInteraction.diffDays > 0,
       lastInteractionTime: context.lastInteraction?.timeAgo || null,
       memoryCount: context.memories?.length || 0,
       historyCount: context.history?.length || 0,
-      hasSymptoms: context.memories?.some((m) => m.key.includes("sintoma")) || false,
-      hasTriggers: context.memories?.some((m) => m.key.includes("gatilho")) || false,
+      hasSymptoms:
+        context.memories?.some((m) => m.key.includes("sintoma")) || false,
+      hasTriggers:
+        context.memories?.some((m) => m.key.includes("gatilho")) || false,
     };
   }
 }

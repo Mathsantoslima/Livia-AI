@@ -195,8 +195,10 @@ class UserOnboarding {
     }
 
     // Verificar campos essenciais
-    const hasName = !!(user.name || user.nickname);
-    const hasNickname = !!user.nickname;
+    // CRITICAL: preferred_name é o nome que o usuário PREFERE ser chamado
+    // Se tem preferred_name, não precisa ter nickname obrigatoriamente
+    const hasName = !!(user.name || user.preferred_name || user.nickname);
+    const hasPreferredName = !!(user.preferred_name || user.nickname); // preferred_name OU nickname
     const hasBasicInfo = !!(user.age || user.gender);
 
     // Verificar se tem rotina básica ou hábitos
@@ -211,7 +213,7 @@ class UserOnboarding {
 
     logger.info("[Onboarding] Verificando perfil completo:", {
       hasName,
-      hasNickname,
+      hasPreferredName,
       hasBasicInfo,
       hasRoutine,
       hasHabits,
@@ -221,10 +223,11 @@ class UserOnboarding {
       onboardingCompleted: user.onboarding_completed,
     });
 
-    // Perfil completo precisa ter: nome, nickname, info básica, hábitos (sono E trabalho), rotina E sintomas
+    // Perfil completo precisa ter: nome (ou preferred_name), preferred_name/nickname, info básica, hábitos (sono E trabalho), rotina E sintomas
+    // CRITICAL: preferred_name é suficiente (não precisa ter nickname se tem preferred_name)
     const isComplete =
       hasName &&
-      hasNickname &&
+      hasPreferredName && // preferred_name OU nickname
       hasBasicInfo &&
       hasSleepHabits &&
       hasWorkHabits &&
@@ -239,14 +242,26 @@ class UserOnboarding {
 
   /**
    * Determina o próximo passo do onboarding
+   * REGRA CRÍTICA: NUNCA perguntar nome/apelido se já existe preferred_name, nickname ou name
    */
   _getNextOnboardingStep(user) {
-    if (!user.name) {
+    // CRITICAL: Verificar se já tem nome/preferred_name ANTES de perguntar
+    const hasAnyName = !!(user.name || user.preferred_name || user.nickname);
+    
+    // Se não tem NENHUM nome, perguntar nome
+    if (!hasAnyName) {
       return "name";
     }
-    if (!user.nickname) {
+    
+    // Se tem name mas não tem preferred_name nem nickname, perguntar apelido
+    // MAS: se já tem preferred_name, NUNCA perguntar nickname novamente
+    if (user.name && !user.preferred_name && !user.nickname) {
       return "nickname";
     }
+    
+    // Se já tem preferred_name ou nickname, PULAR para próximo passo
+    // NUNCA perguntar nome/apelido novamente
+    
     if (!user.age && !user.gender) {
       return "basic_info";
     }
@@ -339,6 +354,11 @@ class UserOnboarding {
             );
             const name = nameMatch ? nameMatch[1].trim() : answer.trim();
             updateData.name = name;
+            // Se ainda não tem preferred_name, usar o nome como preferred_name temporariamente
+            // (será atualizado quando o usuário informar o apelido)
+            if (!existingUser?.preferred_name && !existingUser?.nickname) {
+              updateData.preferred_name = name;
+            }
             logger.info(`[Onboarding] Nome extraído: ${name}`);
           }
           break;
@@ -352,8 +372,11 @@ class UserOnboarding {
             const nickname = nicknameMatch
               ? nicknameMatch[1].trim()
               : answer.trim();
+            // CRITICAL: Salvar como nickname E preferred_name
+            // preferred_name é o nome que o usuário PREFERE ser chamado (pode ser apelido ou nome)
             updateData.nickname = nickname;
-            logger.info(`[Onboarding] Apelido extraído: ${nickname}`);
+            updateData.preferred_name = nickname; // Salvar também como preferred_name
+            logger.info(`[Onboarding] Apelido extraído e salvo: ${nickname} (também como preferred_name)`);
           }
           break;
 
@@ -665,7 +688,8 @@ class UserOnboarding {
       logger.info(`[Onboarding] Step corrigido para: ${step}`);
     }
 
-    // Usar nickname se disponível, senão usar name, senão genérico
+    // CRITICAL: Usar preferred_name (userNickname) primeiro, depois userName
+    // userNickname aqui representa o nome PREFERIDO (pode ser preferred_name ou nickname)
     const displayName = userNickname || userName;
     const greetings = displayName ? `${displayName}!` : "";
 

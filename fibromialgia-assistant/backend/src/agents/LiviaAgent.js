@@ -393,10 +393,12 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
             );
             // #endregion
             // Ainda há mais perguntas
+            // CRITICAL: Usar preferred_name primeiro (nome que o usuário PREFERE ser chamado)
+            const preferredName = nextStatus.profile?.preferred_name || nextStatus.profile?.nickname || nextStatus.profile?.name;
             const nextQuestionData = userOnboarding.getOnboardingQuestion(
               nextStatus.currentStep,
               nextStatus.profile?.name,
-              nextStatus.profile?.nickname
+              preferredName // Passar preferred_name como nickname (nome preferido)
             );
 
             // #region agent log
@@ -442,10 +444,12 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
           } else {
             // Onboarding completo
             await userOnboarding.completeOnboarding(normalizedUserId);
+            // CRITICAL: Usar preferred_name primeiro
+            const preferredName = nextStatus.profile?.preferred_name || nextStatus.profile?.nickname || nextStatus.profile?.name;
             const completionMessageData = userOnboarding.getOnboardingQuestion(
               "complete",
               nextStatus.profile?.name,
-              nextStatus.profile?.nickname
+              preferredName
             );
 
             // Verificar se retornou chunks ou texto simples
@@ -490,10 +494,12 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
             )}...")`
           );
 
+          // CRITICAL: Usar preferred_name primeiro (se existir)
+          const preferredName = onboardingStatus.profile?.preferred_name || onboardingStatus.profile?.nickname;
           const welcomeMessageData = userOnboarding.getOnboardingQuestion(
             "welcome", // Sempre usar "welcome" para primeira mensagem
             onboardingStatus.profile?.name,
-            onboardingStatus.profile?.nickname
+            preferredName
           );
 
           // Verificar se retornou chunks ou texto simples
