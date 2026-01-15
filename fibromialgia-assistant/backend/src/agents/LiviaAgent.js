@@ -208,23 +208,32 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
       // FORÇAR ONBOARDING se necessário - garantir que sempre execute
       // CRITICAL: Se não tem perfil OU precisa de onboarding OU houve erro → FORÇAR
-      const shouldDoOnboarding = onboardingStatus.needsOnboarding === true || 
-                                 onboardingStatus.error || // Se houve erro, fazer onboarding
-                                 !onboardingStatus.profile || // Se não tem perfil, fazer onboarding
-                                 onboardingStatus.currentStep; // Se tem passo definido, fazer onboarding
-      
+      const shouldDoOnboarding =
+        onboardingStatus.needsOnboarding === true ||
+        onboardingStatus.error || // Se houve erro, fazer onboarding
+        !onboardingStatus.profile || // Se não tem perfil, fazer onboarding
+        onboardingStatus.currentStep; // Se tem passo definido, fazer onboarding
+
       logger.info(`[Livia] Deve fazer onboarding? ${shouldDoOnboarding}`, {
         needsOnboarding: onboardingStatus.needsOnboarding,
         hasError: !!onboardingStatus.error,
         hasProfile: !!onboardingStatus.profile,
         hasStep: !!onboardingStatus.currentStep,
       });
-      
+
       if (shouldDoOnboarding) {
         logger.info(
-          `[Livia] Usuário ${normalizedUserId} precisa de onboarding. Passo: ${onboardingStatus.currentStep || "welcome"}, motivo: ${onboardingStatus.needsOnboarding ? "needsOnboarding=true" : onboardingStatus.error ? "erro na verificação" : "sem perfil"}`
+          `[Livia] Usuário ${normalizedUserId} precisa de onboarding. Passo: ${
+            onboardingStatus.currentStep || "welcome"
+          }, motivo: ${
+            onboardingStatus.needsOnboarding
+              ? "needsOnboarding=true"
+              : onboardingStatus.error
+              ? "erro na verificação"
+              : "sem perfil"
+          }`
         );
-        
+
         // Garantir que sempre há um passo definido
         const currentStep = onboardingStatus.currentStep || "welcome";
 
@@ -295,11 +304,23 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           } else {
             // Onboarding completo
             await userOnboarding.completeOnboarding(normalizedUserId);
-            const completionMessage = userOnboarding.getOnboardingQuestion(
+            const completionMessageData = userOnboarding.getOnboardingQuestion(
               "symptoms",
               nextStatus.profile?.name,
               nextStatus.profile?.nickname
             );
+
+            // Verificar se retornou chunks ou texto simples
+            let completionMessage;
+            let completionChunks;
+            
+            if (completionMessageData && completionMessageData.chunks) {
+              completionChunks = completionMessageData.chunks;
+              completionMessage = completionChunks.join("\n\n");
+            } else {
+              completionMessage = completionMessageData || "Onboarding completo!";
+              completionChunks = [completionMessage];
+            }
 
             // Salvar mensagem de conclusão no histórico
             try {
@@ -317,7 +338,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
             return {
               text: completionMessage,
-              chunks: [completionMessage],
+              chunks: completionChunks,
               type: "onboarding_complete",
             };
           }
@@ -327,13 +348,27 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             `[Livia] Iniciando onboarding para usuário ${normalizedUserId}`
           );
 
-          const welcomeMessage = userOnboarding.getOnboardingQuestion(
+          const welcomeMessageData = userOnboarding.getOnboardingQuestion(
             currentStep,
             onboardingStatus.profile?.name,
             onboardingStatus.profile?.nickname
           );
 
-          // Salvar mensagem de onboarding no histórico
+          // Verificar se retornou chunks ou texto simples
+          let welcomeMessage;
+          let welcomeChunks;
+          
+          if (welcomeMessageData && welcomeMessageData.chunks) {
+            // Mensagem em blocos
+            welcomeChunks = welcomeMessageData.chunks;
+            welcomeMessage = welcomeChunks.join("\n\n");
+          } else {
+            // Mensagem simples (fallback)
+            welcomeMessage = welcomeMessageData || "Olá! Vamos começar? Qual é o seu nome?";
+            welcomeChunks = [welcomeMessage];
+          }
+
+          // Salvar mensagem completa de onboarding no histórico
           try {
             await this._saveOnboardingMessage(
               normalizedUserId,
@@ -349,7 +384,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
           return {
             text: welcomeMessage,
-            chunks: [welcomeMessage],
+            chunks: welcomeChunks,
             type: "onboarding",
             onboardingStep: currentStep,
           };

@@ -3,6 +3,7 @@
 ## ✅ Problema Identificado
 
 O onboarding não estava sendo executado porque:
+
 1. A verificação de perfil completo estava muito permissiva
 2. Erros silenciosos estavam bloqueando o onboarding
 3. Não havia fallback quando a verificação falhava
@@ -12,17 +13,20 @@ O onboarding não estava sendo executado porque:
 ## 🔧 Correções Aplicadas
 
 ### 1. **Forçar Onboarding em Caso de Erro** ✅
+
 ```javascript
 // ANTES: Retornava needsOnboarding: false em caso de erro
 // AGORA: Retorna needsOnboarding: true em caso de erro
 ```
 
 **Mudança:**
+
 - Se houver erro ao buscar usuário (exceto "não encontrado"), assume que precisa de onboarding
 - Se houver erro crítico, assume que precisa de onboarding por segurança
 - Nunca bloqueia o usuário por erro técnico
 
 ### 2. **Verificação de Perfil Mais Rigorosa** ✅
+
 ```javascript
 // ANTES: Perfil completo se tinha nome E (rotina OU hábitos)
 // AGORA: Perfil completo precisa ter:
@@ -36,20 +40,24 @@ O onboarding não estava sendo executado porque:
 ```
 
 **Mudança:**
+
 - Verificação muito mais rigorosa
 - Logs detalhados de cada campo
 - Garante que onboarding só completa quando TODOS os dados estão presentes
 
 ### 3. **Forçar Onboarding no LiviaAgent** ✅
+
 ```javascript
 // ANTES: if (onboardingStatus.needsOnboarding)
-// AGORA: 
-const shouldDoOnboarding = onboardingStatus.needsOnboarding || 
-                           onboardingStatus.error || 
-                           !onboardingStatus.profile;
+// AGORA:
+const shouldDoOnboarding =
+  onboardingStatus.needsOnboarding ||
+  onboardingStatus.error ||
+  !onboardingStatus.profile;
 ```
 
 **Mudança:**
+
 - Força onboarding se:
   - `needsOnboarding = true` OU
   - Houve erro na verificação OU
@@ -57,6 +65,7 @@ const shouldDoOnboarding = onboardingStatus.needsOnboarding ||
 - Garante que sempre há um passo definido (`currentStep || "welcome"`)
 
 ### 4. **Logs Detalhados** ✅
+
 - Logs em cada verificação de perfil
 - Logs mostrando motivo do onboarding
 - Logs de cada campo verificado
@@ -93,6 +102,7 @@ LiviaAgent verifica shouldDoOnboarding
 ## 🔍 Logs Esperados
 
 ### Quando Onboarding Deve Acontecer:
+
 ```
 [Onboarding] Verificando status para userId: 5511936188540 (normalizado: 5511936188540)
 [Onboarding] Resultado da busca: { found: false, error: 'PGRST116', userId: '5511936188540' }
@@ -103,6 +113,7 @@ LiviaAgent verifica shouldDoOnboarding
 ```
 
 ### Quando Onboarding Não Deve Aconter (Perfil Completo):
+
 ```
 [Onboarding] Verificando status para userId: 5511936188540
 [Onboarding] Resultado da busca: { found: true, error: null }
@@ -117,16 +128,19 @@ LiviaAgent verifica shouldDoOnboarding
 ## ✅ Validações Adicionadas
 
 ### 1. **Validação de Erro**
+
 - Se erro ao buscar usuário → Força onboarding
 - Se erro crítico → Força onboarding
 - Nunca bloqueia por erro técnico
 
 ### 2. **Validação de Perfil**
+
 - Verifica TODOS os campos necessários
 - Logs detalhados de cada campo
 - Só marca como completo se TUDO estiver preenchido
 
 ### 3. **Validação de Passo**
+
 - Sempre garante que há um passo definido
 - Fallback para "welcome" se não houver passo
 - Logs mostram motivo do onboarding
@@ -147,10 +161,12 @@ LiviaAgent verifica shouldDoOnboarding
 ## 🔍 Como Verificar
 
 1. **Enviar mensagem para usuário novo:**
+
    - Deve iniciar onboarding imediatamente
    - Logs devem mostrar: "Usuário não encontrado - precisa de onboarding"
 
 2. **Verificar logs do Vercel:**
+
    - Procurar por `[Onboarding]` e `[Livia]`
    - Verificar se `needsOnboarding: true`
    - Verificar se `currentStep` está definido
@@ -167,11 +183,13 @@ LiviaAgent verifica shouldDoOnboarding
 Se o onboarding ainda não acontecer:
 
 1. **Verificar logs do Vercel** para ver:
+
    - Se `checkOnboardingStatus` está sendo chamado
    - Qual é o resultado da busca
    - Se há erros silenciosos
 
 2. **Verificar banco de dados:**
+
    - Tabela `users_livia` existe?
    - Há usuários na tabela?
    - Permissões de leitura/escrita estão corretas?
@@ -188,11 +206,13 @@ Se o onboarding ainda não acontecer:
 ## ✅ Garantias
 
 **Agora o onboarding SEMPRE acontece quando:**
+
 - ✅ Usuário não existe no banco
 - ✅ Há erro ao buscar usuário
 - ✅ Perfil está incompleto
 - ✅ `onboarding_completed` é `false` ou `null`
 
 **Onboarding NÃO acontece apenas quando:**
+
 - ✅ `onboarding_completed` é explicitamente `true`
 - ✅ TODOS os campos necessários estão preenchidos

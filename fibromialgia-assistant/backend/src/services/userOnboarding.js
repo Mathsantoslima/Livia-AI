@@ -403,7 +403,18 @@ class UserOnboarding {
 
     switch (step) {
       case "welcome":
-        return `${greetings}\n\nMeu nome é Livia 🌷\n\nSou sua assistente virtual especializada em fibromialgia. Estou aqui para te acompanhar todos os dias, entender sua rotina, seus sintomas e te ajudar a encontrar padrões que possam melhorar seu bem-estar.\n\n✨ Como posso te ajudar:\n• Acompanhar como você está se sentindo\n• Identificar padrões entre sua rotina e sintomas\n• Fazer previsões sobre seus dias (com base no que aprendi sobre você)\n• Enviar mensagens diárias às 8h da manhã com insights personalizados\n• Te ajudar a entender o que pode estar influenciando seus sintomas\n\n💬 Você pode me enviar:\n• Texto: me conte como está se sentindo\n• Áudio: fale comigo naturalmente\n• Imagens: compartilhe algo relevante\n• Documentos: relatórios médicos, anotações\n\n⚠️ Importante: Eu NÃO faço diagnósticos, NÃO prescrevo medicamentos e NÃO substituo consultas médicas. Sou uma companheira que entende fibromialgia e está presente todos os dias.\n\nVamos começar? Antes de tudo, qual é o seu nome? 😊`;
+        // Retornar mensagem em blocos para envio sequencial
+        return {
+          chunks: [
+            `${greetings}\n\nMeu nome é Livia 🌷`,
+            `Sou sua assistente virtual especializada em fibromialgia. Estou aqui para te acompanhar todos os dias, entender sua rotina, seus sintomas e te ajudar a encontrar padrões que possam melhorar seu bem-estar.`,
+            `✨ Como posso te ajudar:\n• Acompanhar como você está se sentindo\n• Identificar padrões entre sua rotina e sintomas\n• Fazer previsões sobre seus dias (com base no que aprendi sobre você)\n• Enviar mensagens diárias às 8h da manhã com insights personalizados\n• Te ajudar a entender o que pode estar influenciando seus sintomas`,
+            `💬 Você pode me enviar:\n• Texto: me conte como está se sentindo\n• Áudio: fale comigo naturalmente\n• Imagens: compartilhe algo relevante\n• Documentos: relatórios médicos, anotações`,
+            `⚠️ Importante: Eu NÃO faço diagnósticos, NÃO prescrevo medicamentos e NÃO substituo consultas médicas. Sou uma companheira que entende fibromialgia e está presente todos os dias.`,
+            `Vamos começar? Antes de tudo, qual é o seu nome? 😊`
+          ],
+          isChunked: true
+        };
 
       case "name":
         return `${greetings}\n\nPrazer em conhecê-lo(a)! 👋\n\nE como você prefere ser chamado(a)? (pode ser um apelido, diminutivo ou o próprio nome)`;
@@ -424,7 +435,15 @@ class UserOnboarding {
         return `Ótimo! Já estou conhecendo você melhor. 🎯\n\nPor último, me conte:\n- Quais são os principais sintomas de fibromialgia que você sente? (ex: dor, fadiga, problemas de sono)\n- Há algo que você percebe que piora seus sintomas? (gatilhos)`;
 
       case "symptoms":
-        return `Perfeito! Agora já tenho um perfil completo sobre você. 🎉\n\nVou usar essas informações para:\n• Entender melhor seus padrões\n• Fazer previsões sobre seus dias\n• Dar sugestões personalizadas\n• Te enviar mensagens diárias às 8h da manhã com insights\n\n💡 Dica: Quanto mais você me contar sobre seu dia a dia, melhor eu consigo te ajudar a identificar o que funciona ou não para você.\n\nAgora pode me contar como você está se sentindo hoje? Ou se preferir, pode me enviar um áudio, uma imagem ou qualquer coisa que quiser compartilhar! 😊`;
+        return {
+          chunks: [
+            `Perfeito! Agora já tenho um perfil completo sobre você. 🎉`,
+            `Vou usar essas informações para:\n• Entender melhor seus padrões\n• Fazer previsões sobre seus dias\n• Dar sugestões personalizadas\n• Te enviar mensagens diárias às 8h da manhã com insights`,
+            `💡 Dica: Quanto mais você me contar sobre seu dia a dia, melhor eu consigo te ajudar a identificar o que funciona ou não para você.`,
+            `Agora pode me contar como você está se sentindo hoje? Ou se preferir, pode me enviar um áudio, uma imagem ou qualquer coisa que quiser compartilhar! 😊`
+          ],
+          isChunked: true
+        };
 
       default:
         return "Obrigada pelas informações! Como posso ajudar você hoje?";
