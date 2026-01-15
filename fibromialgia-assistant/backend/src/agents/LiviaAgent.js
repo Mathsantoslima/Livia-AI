@@ -325,6 +325,18 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             };
           }
 
+          // Garantir que nextStatus sempre tem um valor válido
+          if (!nextStatus) {
+            logger.error(
+              `[Livia] CRÍTICO: nextStatus é undefined para ${normalizedUserId}. Usando fallback.`
+            );
+            nextStatus = {
+              needsOnboarding: true,
+              currentStep: stepToProcess === "name" ? "nickname" : "name",
+              profile: onboardingStatus.profile || {},
+            };
+          }
+
           // Salvar resposta do usuário no histórico
           try {
             await this._saveOnboardingMessage(
@@ -339,7 +351,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             );
           }
 
-          if (nextStatus && nextStatus.needsOnboarding) {
+          if (nextStatus.needsOnboarding) {
             // Ainda há mais perguntas
             const nextQuestionData = userOnboarding.getOnboardingQuestion(
               nextStatus.currentStep,
