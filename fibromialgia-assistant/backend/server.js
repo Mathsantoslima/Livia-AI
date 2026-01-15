@@ -42,17 +42,13 @@ try {
     })
   );
 
-  // Rotas
+  // Rotas - IMPORTANTE: Ordem importa! Rotas específicas antes das genéricas
   try {
-    // Importar e usar rotas
+    // Importar rotas
     const apiRoutes = require("./src/routes/index");
     const webhookRoutes = require("./src/routes/webhookRoutes");
 
-    // Configurar rotas
-    app.use("/api", apiRoutes);
-    app.use("/webhook", webhookRoutes);
-    app.use("/", apiRoutes);
-
+    // Rotas específicas primeiro (antes de /api e /webhook)
     // Rota raiz
     app.get("/", (req, res) => {
       res.status(200).json({
@@ -83,6 +79,11 @@ try {
     app.get("/favicon.ico", (req, res) => {
       res.status(204).end();
     });
+
+    // Rotas de API e Webhook (depois das rotas específicas)
+    app.use("/api", apiRoutes);
+    app.use("/webhook", webhookRoutes);
+    app.use("/", apiRoutes);
   } catch (error) {
     console.error("❌ Erro ao configurar rotas:", error);
     // Criar rota de erro para não quebrar completamente
