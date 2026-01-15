@@ -685,6 +685,9 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
    * Marca que welcome foi enviado para um usuário (adiciona ao cache)
    */
   _markWelcomeSent(userId) {
+    // Garantir que cache está inicializado (importante no Vercel serverless)
+    this._ensureCacheInitialized();
+    
     const normalizedPhone = userId.replace(/[^\d]/g, "");
     this.welcomeSentCache.set(normalizedPhone, Date.now());
     logger.info(
