@@ -313,12 +313,13 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             // Verificar se retornou chunks ou texto simples
             let completionMessage;
             let completionChunks;
-            
+
             if (completionMessageData && completionMessageData.chunks) {
               completionChunks = completionMessageData.chunks;
               completionMessage = completionChunks.join("\n\n");
             } else {
-              completionMessage = completionMessageData || "Onboarding completo!";
+              completionMessage =
+                completionMessageData || "Onboarding completo!";
               completionChunks = [completionMessage];
             }
 
@@ -357,14 +358,15 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           // Verificar se retornou chunks ou texto simples
           let welcomeMessage;
           let welcomeChunks;
-          
+
           if (welcomeMessageData && welcomeMessageData.chunks) {
             // Mensagem em blocos
             welcomeChunks = welcomeMessageData.chunks;
             welcomeMessage = welcomeChunks.join("\n\n");
           } else {
             // Mensagem simples (fallback)
-            welcomeMessage = welcomeMessageData || "Olá! Vamos começar? Qual é o seu nome?";
+            welcomeMessage =
+              welcomeMessageData || "Olá! Vamos começar? Qual é o seu nome?";
             welcomeChunks = [welcomeMessage];
           }
 

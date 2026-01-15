@@ -398,8 +398,13 @@ class UserOnboarding {
   /**
    * Gera mensagem de pergunta baseada no passo atual
    */
-  getOnboardingQuestion(step, userName = null) {
-    const greetings = userName ? `Olá, ${userName}!` : "Olá!";
+  getOnboardingQuestion(step, userName = null, userNickname = null) {
+    // Usar nickname se disponível, senão usar name, senão genérico
+    const greetings = userNickname 
+      ? `Olá, ${userNickname}!` 
+      : userName 
+      ? `Olá, ${userName}!` 
+      : "Olá!";
 
     switch (step) {
       case "welcome":
