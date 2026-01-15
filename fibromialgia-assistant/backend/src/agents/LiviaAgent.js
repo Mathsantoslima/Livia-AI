@@ -629,11 +629,25 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
   }
 
   /**
+   * Garante que o cache está inicializado (lazy initialization)
+   * Necessário porque no Vercel serverless cada requisição pode criar nova instância
+   */
+  _ensureCacheInitialized() {
+    if (!this.welcomeSentCache) {
+      this.welcomeSentCache = new Map();
+      logger.info("[Livia] Cache de welcome inicializado (lazy)");
+    }
+  }
+
+  /**
    * Verifica se usuário já tem conversa anterior (para detectar se welcome já foi enviado)
    * Usa cache em memória + banco de dados para garantir detecção mesmo com erros
    */
   async _hasPreviousConversation(userId) {
     const normalizedPhone = userId.replace(/[^\d]/g, "");
+
+    // Garantir que cache está inicializado (importante no Vercel serverless)
+    this._ensureCacheInitialized();
 
     // PRIMEIRO: Verificar cache em memória (mais rápido e não depende de banco)
     if (this.welcomeSentCache.has(normalizedPhone)) {
@@ -687,7 +701,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
   _markWelcomeSent(userId) {
     // Garantir que cache está inicializado (importante no Vercel serverless)
     this._ensureCacheInitialized();
-    
+
     const normalizedPhone = userId.replace(/[^\d]/g, "");
     this.welcomeSentCache.set(normalizedPhone, Date.now());
     logger.info(
