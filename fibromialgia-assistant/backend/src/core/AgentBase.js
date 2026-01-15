@@ -160,9 +160,19 @@ class AgentBase {
   _buildSystemPrompt(userMemory, context) {
     let prompt = "";
 
-    // Persona
+    // Persona (com suporte a template de contexto)
     if (this.persona) {
-      prompt += `Você é ${this.name}. ${this.persona}\n\n`;
+      let personaText = this.persona;
+      
+      // Se há contextPrompt no contexto, injetar na persona
+      if (context.contextPrompt) {
+        personaText = personaText.replace("{contextPrompt}", context.contextPrompt);
+      } else {
+        // Remover placeholder se não houver contexto
+        personaText = personaText.replace("{contextPrompt}", "Novo usuário - primeiro contato");
+      }
+      
+      prompt += `Você é ${this.name}. ${personaText}\n\n`;
     }
 
     // Objetivos
@@ -323,6 +333,16 @@ class AgentBase {
         prompt += `${i + 1}. ${insight.title}: ${insight.description}\n`;
       });
       prompt += "\n";
+    }
+
+    // Contexto da última interação (IMPORTANTE para humanização)
+    if (context.isReturningUser && context.lastInteractionTime) {
+      prompt += `\n🔔 IMPORTANTE - USUÁRIO RETORNANDO:\n`;
+      prompt += `Última conversa: ${context.lastInteractionTime}\n`;
+      if (context.userName) {
+        prompt += `Nome: ${context.userName}\n`;
+      }
+      prompt += `Demonstre que você LEMBRA dessa pessoa! Não comece como se fosse a primeira vez.\n\n`;
     }
 
     // Instruções sobre tools

@@ -9,6 +9,7 @@
 
 const { supabase } = require("../config/supabase");
 const logger = require("../utils/logger");
+const contextMemory = require("./contextMemory");
 
 class UserOnboarding {
   /**
@@ -390,10 +391,115 @@ class UserOnboarding {
         throw updateError;
       }
 
+      // SALVAR MEMÓRIAS do onboarding para contextMemory
+      try {
+        await this._saveOnboardingMemories(normalizedPhone, step, updateData);
+      } catch (memError) {
+        logger.warn("[Onboarding] Erro ao salvar memórias:", memError.message);
+      }
+
       return { success: true, user: updatedUser };
     } catch (error) {
       logger.error("[Onboarding] Erro ao atualizar perfil:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Salva memórias coletadas durante o onboarding
+   */
+  async _saveOnboardingMemories(phone, step, data) {
+    try {
+      const memories = [];
+
+      switch (step) {
+        case "name":
+          if (data.name) {
+            memories.push({
+              key: "nome_usuario",
+              value: data.name,
+              options: { source: "onboarding" },
+            });
+          }
+          break;
+
+        case "nickname":
+          if (data.nickname) {
+            memories.push({
+              key: "apelido_preferido",
+              value: data.nickname,
+              options: { source: "onboarding" },
+            });
+          }
+          break;
+
+        case "basic_info":
+          if (data.age) {
+            memories.push({
+              key: "idade",
+              value: String(data.age),
+              options: { source: "onboarding" },
+            });
+          }
+          if (data.gender) {
+            memories.push({
+              key: "genero",
+              value: data.gender,
+              options: { source: "onboarding" },
+            });
+          }
+          break;
+
+        case "sleep_habits":
+          if (data.habits?.sleep) {
+            memories.push({
+              key: "habitos_sono",
+              value: data.habits.sleep,
+              options: { source: "onboarding" },
+            });
+          }
+          break;
+
+        case "work_habits":
+          if (data.habits?.work) {
+            memories.push({
+              key: "habitos_trabalho",
+              value: data.habits.work,
+              options: { source: "onboarding" },
+            });
+          }
+          break;
+
+        case "daily_routine":
+          if (data.daily_routine) {
+            memories.push({
+              key: "rotina_diaria",
+              value: data.daily_routine,
+              options: { source: "onboarding" },
+            });
+          }
+          break;
+
+        case "symptoms":
+          if (data.main_symptoms && data.main_symptoms.length > 0) {
+            memories.push({
+              key: "sintomas_principais",
+              value: { symptoms: data.main_symptoms },
+              options: { source: "onboarding" },
+            });
+          }
+          break;
+      }
+
+      // Salvar todas as memórias
+      if (memories.length > 0) {
+        await contextMemory.saveMemories(phone, memories);
+        logger.info(
+          `[Onboarding] Salvou ${memories.length} memórias para ${phone}`
+        );
+      }
+    } catch (error) {
+      logger.error("[Onboarding] Erro ao salvar memórias:", error);
     }
   }
 

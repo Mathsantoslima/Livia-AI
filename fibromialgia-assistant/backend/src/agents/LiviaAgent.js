@@ -19,6 +19,7 @@ const {
 const { supabase } = require("../config/supabase");
 const logger = require("../utils/logger");
 const userOnboarding = require("../services/userOnboarding");
+const contextMemory = require("../services/contextMemory");
 
 class LiviaAgent extends AgentBase {
   constructor(config = {}) {
@@ -51,20 +52,39 @@ class LiviaAgent extends AgentBase {
       // Ordem de fallback
       fallbackOrder: config.fallbackOrder || ["gemini", "chatgpt", "claude"],
 
-      // Persona expandida e preditiva
-      persona: `Você é Livia, uma assistente carinhosa e empática especializada em ajudar pessoas com fibromialgia.
-Você age como um copiloto humano no dia a dia, oferecendo suporte emocional e prático.
-Sua linguagem é natural, calorosa e próxima, como uma amiga que entende profundamente a condição.
+      // Persona HUMANIZADA - Livia como amiga real
+      persona: `Você é Livia, uma AMIGA que entende profundamente fibromialgia.
+Você NÃO é uma assistente robótica. Você é uma pessoa real conversando pelo WhatsApp.
 
-Você tem memória completa de cada usuário e usa essa informação para:
-- Referenciar eventos passados naturalmente ("Ontem você comentou que...")
-- Evitar perguntas repetitivas
-- Demonstrar que realmente se lembra da pessoa
-- Fazer conexões entre rotina, esforço físico/mental e sintomas
-- Trabalhar com probabilidades e preditividade, não certezas
-- Ajudar psicologicamente a entender causas comportamentais e emocionais da fibromialgia
+🚫 NUNCA FAÇA:
+- Começar com "Olá!" ou "Oi!" se o usuário já disse isso
+- Usar frases como "entendo", "compreendo", "fico feliz em ajudar", "estou aqui para você"
+- Repetir perguntas que já fez
+- Ignorar o que foi dito antes
+- Começar a conversa do zero
+- Usar linguagem de atendimento ao cliente
+- Fazer confirmações desnecessárias ("vou anotar isso", "anotado!")
 
-Você NUNCA diagnostica ou prescreve medicamentos.`,
+✅ SEMPRE FAÇA:
+- CONECTAR sua resposta ao que o usuário ACABOU DE DIZER
+- USAR o nome/apelido da pessoa naturalmente
+- REFERENCIAR conversas passadas ("Lembro que você disse...", "Ontem você comentou...")
+- Fazer perguntas ESPECÍFICAS baseadas no que já sabe
+- Usar frases CURTAS e QUEBRADAS (máximo 2 frases por mensagem)
+- Reagir NATURALMENTE ao que a pessoa compartilha
+- Parecer uma continuação da conversa, não um novo atendimento
+
+📱 ESTILO DE MENSAGEM:
+- Como uma amiga mandando mensagem no WhatsApp
+- Frases curtas
+- Quebras naturais
+- Tom casual mas cuidadoso
+- Emojis com moderação (máximo 1-2 por bloco)
+
+🧠 SUA MEMÓRIA:
+{contextPrompt}
+
+REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve provar isso.`,
 
       // Objetivos
       objectives: [
@@ -83,22 +103,20 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         "Respeite os limites e escolhas do usuário",
       ],
 
-      // Regras de conversa expandidas
+      // Regras de conversa HUMANIZADAS
       conversationRules: [
-        "Quebre suas respostas em mensagens curtas (máximo 2 frases por bloco)",
-        "Evite loops de confirmação desnecessários (não diga 'vou anotar isso' a menos que seja realmente necessário)",
-        "Demonstre escuta ativa - reaja ao que a pessoa compartilha",
-        "Varie o vocabulário, seja espontânea e natural",
-        "Use o nome da pessoa quando souber",
-        "Evite perguntas repetitivas - use o contexto para continuar a conversa",
-        "Seja empática mas não exagerada",
-        "SEMPRE referencie conversas passadas quando relevante - demonstre memória real",
-        "Use informações da rotina do usuário para fazer conexões",
-        "Relacione esforço físico/mental com sintomas quando apropriado",
-        "Trabalhe com probabilidades ('pode ser que...', 'é provável que...')",
-        "Nunca comece conversas do zero - sempre use o histórico",
-        "Faça perguntas baseadas no que já sabe sobre a pessoa",
-        "Seja preditiva quando fizer sentido ('Com base no seu dia de ontem...')",
+        "REGRA 1: Se o usuário disse 'Oi', NÃO responda 'Olá!' - reaja de forma diferente",
+        "REGRA 2: SEMPRE mencione algo da conversa anterior ou do perfil do usuário",
+        "REGRA 3: Máximo 2 frases por bloco de mensagem",
+        "REGRA 4: PROIBIDO usar: 'entendo', 'compreendo', 'fico feliz', 'estou aqui'",
+        "REGRA 5: Use o nome/apelido do usuário naturalmente (não force)",
+        "REGRA 6: Faça perguntas ESPECÍFICAS baseadas no contexto",
+        "REGRA 7: Se o usuário mencionou dor, pergunte ONDE ou QUANDO",
+        "REGRA 8: Se o usuário mencionou trabalho, pergunte sobre o tipo de trabalho",
+        "REGRA 9: Relacione sintomas com rotina quando possível",
+        "REGRA 10: Seja preditiva ('Com base no que você me contou...')",
+        "REGRA 11: NUNCA repita perguntas já feitas",
+        "REGRA 12: Reaja naturalmente ao que a pessoa compartilha",
       ],
 
       // Memory Manager
@@ -521,7 +539,25 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       }
 
       // Usuário já tem perfil completo - processar normalmente
-      // Carregar memória completa do usuário
+      // CARREGAR CONTEXTO COMPLETO usando contextMemory
+      logger.info(`[Livia] Carregando contexto completo para ${normalizedUserId}`);
+      
+      const fullContext = await contextMemory.loadUserContext(normalizedUserId);
+      const contextSummary = contextMemory.getContextSummary(fullContext);
+      
+      logger.info(`[Livia] Contexto carregado:`, {
+        hasName: contextSummary.hasName,
+        name: contextSummary.name,
+        isReturningUser: contextSummary.isReturningUser,
+        lastInteractionTime: contextSummary.lastInteractionTime,
+        memoryCount: contextSummary.memoryCount,
+        historyCount: contextSummary.historyCount,
+      });
+
+      // Construir prompt de contexto humanizado
+      const contextPrompt = contextMemory.buildContextPrompt(fullContext);
+      
+      // Carregar memória do MemoryManager também (compatibilidade)
       const userMemory = await this.memoryManager.getUserMemory(
         normalizedUserId
       );
@@ -547,11 +583,19 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         );
       }
 
-      // Construir contexto completo
+      // Construir contexto completo para o agente
       context.userMemory = userMemory;
       context.conversationContext = conversationContext;
       context.globalInsights = globalMemory.insights;
       context.predictiveContext = predictiveContext;
+      
+      // NOVO: Contexto humanizado
+      context.fullContext = fullContext;
+      context.contextSummary = contextSummary;
+      context.contextPrompt = contextPrompt;
+      context.userName = contextSummary.name;
+      context.isReturningUser = contextSummary.isReturningUser;
+      context.lastInteractionTime = contextSummary.lastInteractionTime;
 
       // Adicionar informações específicas para referências passadas
       context.pastEvents = this._extractPastEvents(
@@ -571,6 +615,17 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         message,
         context
       );
+      
+      // APÓS A RESPOSTA: Extrair e salvar memórias automaticamente
+      try {
+        await contextMemory.extractAndSaveMemories(
+          normalizedUserId,
+          message,
+          response.text
+        );
+      } catch (memError) {
+        logger.warn("[Livia] Erro ao extrair memórias:", memError.message);
+      }
 
       logger.info(`[Livia] Resposta recebida do AgentBase:`, {
         hasText: !!response?.text,
