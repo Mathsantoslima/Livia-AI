@@ -5,12 +5,14 @@
 ### **O Que os Logs Mostram:**
 
 ✅ **Funcionando:**
+
 - Requisições GET para `/` → 200 OK
 - Requisições GET para `/webhook/w-api` → 200 OK
 - Conexão com Supabase estabelecida
 - Sistema inicializando corretamente
 
 ❌ **Problema Identificado:**
+
 - **NENHUMA requisição POST para `/webhook/w-api`**
 - Nenhum log `[W-API Webhook] Evento recebido`
 - Nenhum log `[WhatsApp] Mensagem recebida`
@@ -22,6 +24,7 @@
 **O W-API não está chamando o webhook quando recebe mensagens!**
 
 Isso significa que:
+
 1. ✅ O webhook está acessível (GET funciona)
 2. ❌ O W-API não está configurado para chamar o webhook
 3. ❌ Ou o webhook não está configurado corretamente no painel W-API
@@ -53,6 +56,7 @@ Isso significa que:
 ### **Passo 3: Verificar Configuração**
 
 Alguns painéis W-API têm seções diferentes:
+
 - **Webhook Settings**
 - **Callbacks**
 - **Notifications**
@@ -82,6 +86,7 @@ Após enviar, verifique os logs novamente. Você deve ver:
 ### **3. Se Ainda Não Aparecer**
 
 Verifique:
+
 - ✅ URL está correta no painel W-API?
 - ✅ Método é POST (não GET)?
 - ✅ Eventos estão marcados?
@@ -125,6 +130,7 @@ Isso deve retornar a configuração do webhook.
 ### **1. Verificar Formato da URL**
 
 Alguns painéis W-API podem precisar de formato diferente:
+
 - `https://livia-ai.vercel.app/webhook/w-api`
 - `https://livia-ai.vercel.app/api/webhook/w-api` (tente este também)
 

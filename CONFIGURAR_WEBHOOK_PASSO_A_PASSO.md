@@ -28,6 +28,7 @@ No painel W-API, verifique se a instância `VH1570-AP32GM-N91RKI` está:
 - ✅ **Número:** `5511936188540` aparece como conectado
 
 Se não estiver conectada:
+
 1. Clique na instância
 2. Procure por "Conectar" ou "QR Code"
 3. Escaneie o QR Code com seu WhatsApp
@@ -51,6 +52,7 @@ Envie uma mensagem para `(11) 93618-8540` (ou o número conectado).
 ### **4. Verificar Logs do Vercel**
 
 Após enviar, verifique os logs:
+
 1. Vá em **Deployments**
 2. Clique no deployment mais recente
 3. Vá em **Function Logs**
@@ -69,6 +71,7 @@ curl https://livia-ai.vercel.app/api/webhook/status
 ```
 
 **Resposta esperada:**
+
 ```json
 {
   "status": "success",
@@ -103,6 +106,7 @@ Se retornar `"connection": "disconnected"`, a instância não está conectada.
 ### **3. "Mensagem chega mas não responde"**
 
 Verifique:
+
 - ✅ Variáveis de ambiente no Vercel (`W_API_TOKEN`, `GOOGLE_AI_API_KEY`)
 - ✅ Logs do Vercel para erros
 - ✅ Se há créditos/quota nos providers de IA

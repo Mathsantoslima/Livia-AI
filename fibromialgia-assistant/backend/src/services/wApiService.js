@@ -78,7 +78,10 @@ async function checkInstanceStatus(instanceId = DEFAULT_INSTANCE_ID) {
     logger.info(`Status da instância ${instanceId}:`, {
       status: response.data.status || response.data.state,
       connected: response.data.connected,
-      phone: response.data.phone || response.data.connectedPhone || response.data.number,
+      phone:
+        response.data.phone ||
+        response.data.connectedPhone ||
+        response.data.number,
       fullResponse: JSON.stringify(response.data).substring(0, 500),
     });
 
