@@ -20,8 +20,10 @@ class UserOnboarding {
     try {
       // Normalizar phone (remover caracteres não numéricos)
       const normalizedPhone = userId.replace(/[^\d]/g, "");
-      
-      logger.info(`[Onboarding] Verificando status para userId: ${userId} (normalizado: ${normalizedPhone})`);
+
+      logger.info(
+        `[Onboarding] Verificando status para userId: ${userId} (normalizado: ${normalizedPhone})`
+      );
 
       // Buscar usuário pelo phone (userId é o phone)
       const { data: user, error } = await supabase
@@ -38,7 +40,9 @@ class UserOnboarding {
 
       if (error && error.code === "PGRST116") {
         // Usuário não existe - precisa criar e fazer onboarding
-        logger.info(`[Onboarding] Usuário ${normalizedPhone} não encontrado - precisa de onboarding`);
+        logger.info(
+          `[Onboarding] Usuário ${normalizedPhone} não encontrado - precisa de onboarding`
+        );
         return {
           needsOnboarding: true,
           currentStep: "welcome",
@@ -59,10 +63,12 @@ class UserOnboarding {
 
       // Verificar se o perfil está completo
       const profileComplete = this._isProfileComplete(user);
-      
+
       logger.info(`[Onboarding] Perfil do usuário ${normalizedPhone}:`, {
         hasName: !!(user.name || user.nickname),
-        hasRoutine: !!(user.daily_routine && Object.keys(user.daily_routine).length > 0),
+        hasRoutine: !!(
+          user.daily_routine && Object.keys(user.daily_routine).length > 0
+        ),
         hasHabits: !!(user.habits && Object.keys(user.habits).length > 0),
         onboardingCompleted: user.onboarding_completed,
         profileComplete: profileComplete,
@@ -71,7 +77,9 @@ class UserOnboarding {
       if (!profileComplete) {
         // Perfil incompleto - precisa continuar onboarding
         const currentStep = this._getNextOnboardingStep(user);
-        logger.info(`[Onboarding] Usuário ${normalizedPhone} precisa continuar onboarding. Próximo passo: ${currentStep}`);
+        logger.info(
+          `[Onboarding] Usuário ${normalizedPhone} precisa continuar onboarding. Próximo passo: ${currentStep}`
+        );
         return {
           needsOnboarding: true,
           currentStep: currentStep,
@@ -81,7 +89,9 @@ class UserOnboarding {
       }
 
       // Perfil completo
-      logger.info(`[Onboarding] Usuário ${normalizedPhone} tem perfil completo - não precisa de onboarding`);
+      logger.info(
+        `[Onboarding] Usuário ${normalizedPhone} tem perfil completo - não precisa de onboarding`
+      );
       return {
         needsOnboarding: false,
         currentStep: null,
@@ -121,7 +131,11 @@ class UserOnboarding {
 
     // Considerar completo se tem nome e pelo menos rotina ou hábitos básicos
     // Mas só se onboarding_completed não for explicitamente false
-    return hasName && (hasRoutine || hasHabits) && user.onboarding_completed !== false;
+    return (
+      hasName &&
+      (hasRoutine || hasHabits) &&
+      user.onboarding_completed !== false
+    );
   }
 
   /**
@@ -156,9 +170,11 @@ class UserOnboarding {
     try {
       // Normalizar phone
       const normalizedPhone = userId.replace(/[^\d]/g, "");
-      
-      logger.info(`[Onboarding] Atualizando perfil para userId: ${normalizedPhone}, passo: ${step}`);
-      
+
+      logger.info(
+        `[Onboarding] Atualizando perfil para userId: ${normalizedPhone}, passo: ${step}`
+      );
+
       // Buscar usuário existente
       const { data: existingUser } = await supabase
         .from("users_livia")
@@ -248,7 +264,7 @@ class UserOnboarding {
         updateData.onboarding_completed = false;
 
         logger.info(`[Onboarding] Criando novo usuário: ${normalizedPhone}`);
-        
+
         const { data: newUser, error: createError } = await supabase
           .from("users_livia")
           .insert([updateData])
@@ -265,8 +281,10 @@ class UserOnboarding {
       }
 
       // Atualizar usuário existente
-      logger.info(`[Onboarding] Atualizando usuário existente: ${normalizedPhone}`);
-      
+      logger.info(
+        `[Onboarding] Atualizando usuário existente: ${normalizedPhone}`
+      );
+
       const { data: updatedUser, error: updateError } = await supabase
         .from("users_livia")
         .update(updateData)
@@ -292,9 +310,11 @@ class UserOnboarding {
   async completeOnboarding(userId) {
     try {
       const normalizedPhone = userId.replace(/[^\d]/g, "");
-      
-      logger.info(`[Onboarding] Completando onboarding para: ${normalizedPhone}`);
-      
+
+      logger.info(
+        `[Onboarding] Completando onboarding para: ${normalizedPhone}`
+      );
+
       const { error } = await supabase
         .from("users_livia")
         .update({

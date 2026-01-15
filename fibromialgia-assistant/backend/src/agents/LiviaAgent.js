@@ -205,9 +205,8 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
         // Se é mensagem de onboarding, processar resposta
         // Se não é a primeira mensagem (welcome), então é resposta de onboarding
-        const isOnboardingResponse =
-          onboardingStatus.currentStep !== "welcome" ||
-          context.isOnboardingResponse;
+        // Se é welcome, é a primeira mensagem - não processar como resposta ainda
+        const isOnboardingResponse = onboardingStatus.currentStep !== "welcome";
 
         logger.info(
           `[Livia] É resposta de onboarding? ${isOnboardingResponse}, passo atual: ${onboardingStatus.currentStep}`

@@ -64,14 +64,18 @@ class MemoryManager {
       // Obter ID UUID do usuário (se userId for phone, usar user.id)
       const userUuid = user.id;
 
-      // Buscar padrões do usuário
-      const { data: patterns } = await supabase
-        .from("user_patterns")
-        .select("*")
-        .eq("user_id", userUuid)
-        .eq("is_active", true)
-        .order("confidence", { ascending: false })
-        .limit(5);
+      // Buscar padrões do usuário (só se tiver userUuid)
+      let patterns = [];
+      if (userUuid) {
+        const { data: patternsData } = await supabase
+          .from("user_patterns")
+          .select("*")
+          .eq("user_id", userUuid)
+          .eq("is_active", true)
+          .order("confidence", { ascending: false })
+          .limit(5);
+        patterns = patternsData || [];
+      }
 
       // Buscar resumo do histórico (últimas 30 mensagens) - usar phone ou user_id
       const { data: recentMessages } = await supabase
