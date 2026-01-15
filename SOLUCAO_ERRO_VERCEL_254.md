@@ -15,18 +15,21 @@ O `package.json` tinha `openai` duplicado (linhas 32 e 42). Isso foi corrigido.
 ### 2. **bcrypt Atualizado** ✅
 
 Mudei de `bcrypt@^6.0.0` para `bcrypt@^5.1.1` porque:
+
 - `bcrypt@6.x` pode ter problemas de compilação no Vercel
 - `bcrypt@5.x` é mais estável e compatível
 
 ### 3. **Configuração Vercel Melhorada** ✅
 
 Criado `vercel.json` com:
+
 - `maxLambdaSize: 50mb` (para dependências grandes)
 - `maxDuration: 30` (timeout de 30 segundos)
 
 ### 4. **Arquivo .npmrc Criado** ✅
 
 Criado `.npmrc` com:
+
 - `legacy-peer-deps=true` (resolve conflitos de dependências)
 - `engine-strict=false` (permite flexibilidade de versão Node)
 
@@ -41,6 +44,7 @@ O Vercel deve detectar o novo push e tentar fazer deploy novamente automaticamen
 ### **2. Se Ainda Falhar, Verificar Logs**
 
 No dashboard do Vercel:
+
 1. Acesse o projeto
 2. Vá em **Deployments**
 3. Clique no deployment que falhou
@@ -51,12 +55,14 @@ No dashboard do Vercel:
 Certifique-se de que:
 
 **Settings > General:**
+
 - **Root Directory**: `fibromialgia-assistant/backend`
 - **Build Command**: Deixe vazio ou `npm install`
 - **Output Directory**: Deixe vazio (`.`)
 - **Install Command**: `npm install --legacy-peer-deps`
 
 **Settings > Environment Variables:**
+
 - Todas as variáveis de ambiente configuradas
 
 ---
@@ -68,6 +74,7 @@ Certifique-se de que:
 Se ainda falhar, pode ser memória. Tente:
 
 **No `vercel.json`:**
+
 ```json
 {
   "functions": {
@@ -81,6 +88,7 @@ Se ainda falhar, pode ser memória. Tente:
 ### **2. Node.js Version**
 
 No Vercel Dashboard:
+
 - **Settings > General > Node.js Version**: `18.x` ou `20.x`
 
 ### **3. Dependências Nativas**
@@ -93,8 +101,9 @@ npm install bcryptjs
 ```
 
 E no código, trocar:
+
 ```javascript
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
 ```
 
 ---
