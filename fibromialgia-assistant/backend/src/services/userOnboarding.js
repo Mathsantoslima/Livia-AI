@@ -422,10 +422,22 @@ class UserOnboarding {
         };
 
       case "name":
-        return `${greetings}\n\nPrazer em conhecê-lo(a)! 👋\n\nE como você prefere ser chamado(a)? (pode ser um apelido, diminutivo ou o próprio nome)`;
+        return {
+          chunks: [
+            `${greetings}\n\nPrazer em conhecê-lo(a)! 👋`,
+            `E como você prefere ser chamado(a)? (pode ser um apelido, diminutivo ou o próprio nome)`
+          ],
+          isChunked: true
+        };
 
       case "nickname":
-        return `${greetings}\n\nPerfeito! Vou te chamar assim então. 😊\n\nPara personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?`;
+        return {
+          chunks: [
+            `${greetings}\n\nPerfeito! Vou te chamar assim então. 😊`,
+            `Para personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?`
+          ],
+          isChunked: true
+        };
 
       case "basic_info":
         return `Entendi! Obrigada por compartilhar. 💙\n\nAgora, me fale sobre seu sono:\n- Quantas horas você costuma dormir por noite?\n- Como você avalia a qualidade do seu sono? (bom, médio, ruim)`;
