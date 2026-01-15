@@ -238,11 +238,14 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         const currentStep = onboardingStatus.currentStep || "welcome";
 
         // Se é mensagem de onboarding, processar resposta
-        // Se currentStep é "welcome", significa que é a primeira mensagem - enviar welcome
-        // Se currentStep NÃO é "welcome", significa que o usuário está respondendo a uma pergunta
-        // IMPORTANTE: Se currentStep é "welcome" mas o usuário já tem perfil (mesmo que incompleto),
-        // significa que ele está respondendo após o welcome, então tratar como resposta do passo "name"
-        const isFirstMessage = currentStep === "welcome" && !onboardingStatus.profile;
+        // Lógica: 
+        // - Se currentStep é "welcome" E é novo usuário (sem perfil) → primeira mensagem, enviar welcome
+        // - Se currentStep é "welcome" mas já tem perfil → usuário está respondendo após welcome, tratar como "name"
+        // - Se currentStep NÃO é "welcome" → usuário está respondendo a uma pergunta específica
+        // 
+        // IMPORTANTE: Verificar se já existe conversa anterior para detectar se welcome já foi enviado
+        const hasPreviousConversation = await this._hasPreviousConversation(normalizedUserId);
+        const isFirstMessage = currentStep === "welcome" && !onboardingStatus.profile && !hasPreviousConversation;
         const isOnboardingResponse = !isFirstMessage;
 
         logger.info(
