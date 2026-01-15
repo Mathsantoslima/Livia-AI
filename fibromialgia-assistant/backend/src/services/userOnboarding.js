@@ -102,7 +102,13 @@ class UserOnboarding {
             )}, Usando: ${currentStep}`
         );
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/3c56be4f-b25d-428f-97b7-1e740dd57c02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userOnboarding.js:104',message:'checkOnboardingStatus RETORNO (perfil incompleto)',data:{currentStep:currentStep,onboardingStepDB:user.onboarding_step,calculated:this._getNextOnboardingStep(user),userName:user.name,userNickname:user.nickname,needsOnboarding:true},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H2-H3'})}).catch(()=>{});
+        logger.info(
+          `[DEBUG-H1-H2-H3] checkOnboardingStatus RETORNO: currentStep=${currentStep}, onboardingStepDB=${
+            user.onboarding_step
+          }, calculated=${this._getNextOnboardingStep(user)}, userName=${
+            user.name
+          }, userNickname=${user.nickname}`
+        );
         // #endregion
         return {
           needsOnboarding: true,
@@ -278,7 +284,11 @@ class UserOnboarding {
 
       const nextStep = this._getNextStepAfter(step);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/3c56be4f-b25d-428f-97b7-1e740dd57c02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userOnboarding.js:279',message:'updateUserProfile - calculando proximo step',data:{currentStep:step,nextStep:nextStep,answer:answer?answer.substring(0,50):'null'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+      logger.info(
+        `[DEBUG-H2] updateUserProfile: currentStep=${step}, nextStep=${nextStep}, answer=${
+          answer ? answer.substring(0, 50) : "null"
+        }`
+      );
       // #endregion
       const updateData = {
         phone: normalizedPhone,
@@ -586,7 +596,11 @@ class UserOnboarding {
    */
   getOnboardingQuestion(step, userName = null, userNickname = null) {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/3c56be4f-b25d-428f-97b7-1e740dd57c02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userOnboarding.js:580',message:'ENTRADA getOnboardingQuestion',data:{step:step,stepType:typeof step,userName:userName,userNickname:userNickname,stepIsNull:step===null,stepIsUndefined:step===undefined,stepStringified:String(step)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4-H5'})}).catch(()=>{});
+    logger.info(
+      `[DEBUG-H4-H5] ENTRADA getOnboardingQuestion: step=${step}, stepType=${typeof step}, userName=${userName}, userNickname=${userNickname}, stepIsNull=${
+        step === null
+      }, stepIsUndefined=${step === undefined}`
+    );
     // #endregion
     // Usar nickname se disponível, senão usar name, senão genérico
     const displayName = userNickname || userName;
@@ -665,7 +679,11 @@ class UserOnboarding {
 
       default:
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/3c56be4f-b25d-428f-97b7-1e740dd57c02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'userOnboarding.js:659-default',message:'CAIU NO DEFAULT - step nao reconhecido',data:{step:step,stepType:typeof step,displayName:displayName,stepStringified:String(step),stepJSON:JSON.stringify(step)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+        logger.error(
+          `[DEBUG-H5] CAIU NO DEFAULT - step nao reconhecido: step=${step}, stepType=${typeof step}, displayName=${displayName}, stepJSON=${JSON.stringify(
+            step
+          )}`
+        );
         // #endregion
         // Caso inesperado - continuar conversa normalmente
         logger.warn(`[Onboarding] Step desconhecido: ${step}`);

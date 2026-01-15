@@ -374,27 +374,9 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
 
           if (nextStatus.needsOnboarding) {
             // #region agent log
-            fetch(
-              "http://127.0.0.1:7242/ingest/3c56be4f-b25d-428f-97b7-1e740dd57c02",
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  location: "LiviaAgent.js:375",
-                  message: "ANTES getOnboardingQuestion",
-                  data: {
-                    nextStatusCurrentStep: nextStatus.currentStep,
-                    nextStatusNeedsOnboarding: nextStatus.needsOnboarding,
-                    profileName: nextStatus.profile?.name,
-                    profileNickname: nextStatus.profile?.nickname,
-                    stepToProcess: stepToProcess,
-                  },
-                  timestamp: Date.now(),
-                  sessionId: "debug-session",
-                  hypothesisId: "H3-H4",
-                }),
-              }
-            ).catch(() => {});
+            logger.info(
+              `[DEBUG-H3-H4] ANTES getOnboardingQuestion: nextStatus.currentStep=${nextStatus.currentStep}, profileName=${nextStatus.profile?.name}, profileNickname=${nextStatus.profile?.nickname}, stepToProcess=${stepToProcess}`
+            );
             // #endregion
             // Ainda há mais perguntas
             const nextQuestionData = userOnboarding.getOnboardingQuestion(
@@ -404,25 +386,11 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
             );
 
             // #region agent log
-            fetch(
-              "http://127.0.0.1:7242/ingest/3c56be4f-b25d-428f-97b7-1e740dd57c02",
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  location: "LiviaAgent.js:385",
-                  message: "APOS getOnboardingQuestion",
-                  data: {
-                    nextQuestionDataType: typeof nextQuestionData,
-                    hasChunks: !!(nextQuestionData && nextQuestionData.chunks),
-                    rawData: JSON.stringify(nextQuestionData).substring(0, 200),
-                  },
-                  timestamp: Date.now(),
-                  sessionId: "debug-session",
-                  hypothesisId: "H5",
-                }),
-              }
-            ).catch(() => {});
+            logger.info(
+              `[DEBUG-H5] APOS getOnboardingQuestion: type=${typeof nextQuestionData}, hasChunks=${!!(
+                nextQuestionData && nextQuestionData.chunks
+              )}, data=${JSON.stringify(nextQuestionData).substring(0, 200)}`
+            );
             // #endregion
 
             // Verificar se retornou chunks ou texto simples
