@@ -270,7 +270,11 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
             // Onboarding completo
             await userOnboarding.completeOnboarding(normalizedUserId);
             const completionMessage =
-              userOnboarding.getOnboardingQuestion("symptoms");
+              userOnboarding.getOnboardingQuestion(
+                "symptoms",
+                nextStatus.profile?.name,
+                nextStatus.profile?.nickname
+              );
 
             // Salvar mensagem de conclusão no histórico
             try {
