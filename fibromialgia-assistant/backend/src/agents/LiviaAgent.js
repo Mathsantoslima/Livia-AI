@@ -259,17 +259,21 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
 
         if (isOnboardingResponse) {
           // Determinar qual passo processar
-          // CRITICAL: Se currentStep é "welcome" mas já tem conversa anterior, significa que está respondendo após welcome → processar como "name"
+          // CRITICAL: Se currentStep é "welcome" mas não é primeira mensagem (isOnboardingResponse = true),
+          // significa que está respondendo após welcome → sempre processar como "name"
           // Isso evita loop quando usuário responde após welcome mas ainda não tem perfil salvo
-          const stepToProcess =
-            currentStep === "welcome" && (onboardingStatus.profile || hasPreviousConversation)
-              ? "name"
-              : currentStep === "welcome" 
-              ? "name" // Se currentStep é welcome mas não é primeira mensagem, sempre processar como name
-              : currentStep;
-
+          let stepToProcess = currentStep;
+          
+          if (currentStep === "welcome") {
+            // Se currentStep é welcome mas não é primeira mensagem, sempre processar como name
+            stepToProcess = "name";
+            logger.info(
+              `[Livia] ⚠️ currentStep é 'welcome' mas não é primeira mensagem. Processando como 'name' para evitar loop.`
+            );
+          }
+          
           logger.info(
-            `[Livia] Processando resposta do passo: ${stepToProcess} (currentStep era: ${currentStep})`
+            `[Livia] Processando resposta do passo: ${stepToProcess} (currentStep era: ${currentStep}, hasPreviousConversation: ${hasPreviousConversation})`
           );
 
           // Atualizar perfil com a resposta
