@@ -45,12 +45,20 @@ class WhatsAppChannel {
 
       // Converter telefone para userId
       const userId = this._phoneToUserId(from);
+      
+      logger.info(
+        `[WhatsApp] Mensagem recebida de ${from}. Tipo: ${mediaType || "texto"}, URL: ${mediaUrl || "N/A"}`
+      );
 
       let processedContent = body || "";
       let mediaContext = null;
+      let originalMediaType = mediaType; // Guardar tipo original para resposta
 
       // Processar mídia se presente
       if (mediaType && mediaUrl) {
+        logger.info(
+          `[WhatsApp] Iniciando processamento de mídia ${mediaType} de ${from}: ${mediaUrl}`
+        );
         try {
           logger.info(
             `[WhatsApp] Processando mídia ${mediaType} de ${from}: ${mediaUrl}`
@@ -127,6 +135,14 @@ class WhatsAppChannel {
         }
       }
 
+      // Se não há conteúdo processado, mas há mídia, tentar processar
+      if (!processedContent && mediaType && mediaUrl) {
+        logger.warn(
+          `[WhatsApp] Mídia ${mediaType} não foi processada corretamente. URL: ${mediaUrl}`
+        );
+        // Continuar mesmo assim - o agente pode processar o contexto de mídia
+      }
+
       if (!processedContent && !mediaContext) {
         logger.warn(
           "[WhatsApp] Mensagem sem conteúdo processável recebida do WhatsApp"
@@ -135,10 +151,7 @@ class WhatsAppChannel {
       }
 
       logger.info(
-        `[WhatsApp] Mensagem recebida de ${from}: ${processedContent.substring(
-          0,
-          50
-        )}...`
+        `[WhatsApp] Conteúdo processado de ${from}: ${processedContent ? processedContent.substring(0, 50) + "..." : "sem texto"} (mídia: ${mediaType || "nenhuma"})`
       );
 
       logger.info(
@@ -150,16 +163,18 @@ class WhatsAppChannel {
 
       // Processar com o agente (incluindo contexto de mídia)
       // O LiviaAgent já verifica onboarding internamente
+      // Passar tipo de mídia original para que possa responder no mesmo formato
       const response = await this.agent.processMessage(
         userId,
-        processedContent,
+        processedContent || "[Áudio recebido]", // Garantir que sempre há conteúdo
         {
           channel: "whatsapp",
           messageId,
           timestamp,
-          mediaType,
+          mediaType: originalMediaType, // Tipo original (audio, image, etc)
           mediaContext,
           originalBody: body, // Manter texto original se houver
+          userSentAudio: originalMediaType === "audio", // Flag para indicar que usuário enviou áudio
         }
       );
 
@@ -182,9 +197,12 @@ class WhatsAppChannel {
         return;
       }
 
-      // Enviar resposta
+      // Enviar resposta (passar contexto para detectar se deve responder em áudio)
       logger.info(`[WhatsApp] Enviando resposta para ${from}`);
-      await this.sendResponse(from, response);
+      await this.sendResponse(from, response, {
+        userSentAudio: originalMediaType === "audio",
+        mediaType: originalMediaType,
+      });
       logger.info(`[WhatsApp] Resposta enviada com sucesso para ${from}`);
     } catch (error) {
       logger.error("[WhatsApp] Erro ao processar mensagem:", error);

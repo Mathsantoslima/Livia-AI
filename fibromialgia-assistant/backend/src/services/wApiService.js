@@ -249,6 +249,91 @@ async function disconnectInstance(instanceId = DEFAULT_INSTANCE_ID) {
 }
 
 /**
+ * Envia mensagem de áudio
+ * @param {string} instanceId - ID da instância
+ * @param {string} phone - Número do destinatário
+ * @param {string} audioUrl - URL do áudio
+ * @param {Object} options - Opções
+ * @returns {Promise<Object>} Resultado do envio
+ */
+async function sendAudioMessage(instanceId, phone, audioUrl, options = {}) {
+  try {
+    // Limpar número de telefone
+    const cleanPhone = phone.replace(/[^\d]/g, "");
+
+    const payload = {
+      phone: cleanPhone,
+      audio: audioUrl,
+    };
+
+    // Adicionar opções se fornecidas
+    if (options.messageId) {
+      payload.messageId = options.messageId;
+    }
+    if (options.delayMessage !== undefined) {
+      payload.delayMessage = options.delayMessage;
+    }
+
+    const response = await wApiClient.post("/message/send-audio", payload, {
+      params: { instanceId },
+    });
+
+    logger.info(`Áudio W-API enviado para ${cleanPhone}`, {
+      instanceId,
+      messageId: response.data.messageId,
+    });
+
+    // Registrar envio no banco de dados
+    try {
+      await supabase.from("message_logs").insert([
+        {
+          phone: cleanPhone,
+          message_type: "audio",
+          content: audioUrl,
+          status: "sent",
+          instance_name: instanceId,
+          api_response: response.data,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } catch (dbError) {
+      logger.warn(
+        "Erro ao registrar áudio no banco (não crítico):",
+        dbError.message
+      );
+    }
+
+    return response.data;
+  } catch (error) {
+    logger.error(`Erro ao enviar áudio W-API: ${error.message}`, {
+      instanceId,
+      phone,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+
+    // Registrar erro no banco de dados
+    try {
+      await supabase.from("message_logs").insert([
+        {
+          phone: phone.replace(/[^\d]/g, ""),
+          message_type: "audio",
+          content: audioUrl,
+          instance_name: instanceId,
+          status: "error",
+          error_message: error.message,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } catch (dbError) {
+      // Ignorar erro de banco
+    }
+
+    throw error;
+  }
+}
+
+/**
  * Testa a conexão com a W-API
  * @returns {Promise<boolean>} true se conectado
  */

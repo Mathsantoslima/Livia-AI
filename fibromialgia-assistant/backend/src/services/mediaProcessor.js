@@ -359,6 +359,72 @@ ${text.substring(0, 10000)}`; // Limitar tamanho
       .slice(0, 5)
       .map((line) => line.trim());
   }
+
+  /**
+   * Gera áudio a partir de texto (Text-to-Speech)
+   * @param {string} text - Texto para converter em áudio
+   * @param {string} language - Idioma (padrão: pt-BR)
+   * @returns {Promise<Object>} { audioUrl: string, duration: number }
+   */
+  async generateAudioFromText(text, language = "pt-BR") {
+    try {
+      logger.info(`[MediaProcessor] Gerando áudio de ${text.length} caracteres`);
+
+      // Usar OpenAI TTS (melhor qualidade)
+      if (this.openaiApiKey) {
+        try {
+          const response = await axios.post(
+            "https://api.openai.com/v1/audio/speech",
+            {
+              model: "tts-1",
+              input: text,
+              voice: "nova", // Voz feminina natural
+              language: "pt", // Português
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${this.openaiApiKey}`,
+                "Content-Type": "application/json",
+              },
+              responseType: "arraybuffer",
+              timeout: 60000,
+            }
+          );
+
+          // Converter buffer para base64 ou salvar temporariamente
+          // Por enquanto, vamos retornar o buffer e o caller deve fazer upload
+          const audioBuffer = Buffer.from(response.data);
+          
+          // Upload para um serviço temporário ou retornar base64
+          // Por simplicidade, vamos usar um serviço de upload temporário
+          // Ou podemos salvar no Supabase Storage
+          const base64Audio = audioBuffer.toString("base64");
+          const dataUrl = `data:audio/mpeg;base64,${base64Audio}`;
+
+          logger.info(`[MediaProcessor] Áudio gerado com sucesso (${audioBuffer.length} bytes)`);
+
+          return {
+            audioBuffer: audioBuffer,
+            mimeType: "audio/mpeg",
+            duration: Math.ceil(text.length / 10), // Estimativa: ~10 chars por segundo
+            provider: "openai",
+            dataUrl: dataUrl,
+          };
+        } catch (openaiError) {
+          logger.warn(
+            "[MediaProcessor] Erro ao gerar áudio com OpenAI:",
+            openaiError.message
+          );
+          throw openaiError;
+        }
+      }
+
+      throw new Error("Nenhum serviço de TTS disponível");
+    } catch (error) {
+      logger.error("[MediaProcessor] Erro ao gerar áudio:", error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new MediaProcessor();

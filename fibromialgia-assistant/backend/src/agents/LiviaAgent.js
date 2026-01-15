@@ -188,6 +188,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       );
 
       // PRIMEIRO: Verificar se o usuário precisa de onboarding
+      // IMPORTANTE: Verificar mesmo se a mensagem for áudio (processedContent pode estar vazio inicialmente)
       const onboardingStatus = await userOnboarding.checkOnboardingStatus(
         normalizedUserId
       );
@@ -196,6 +197,8 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         needsOnboarding: onboardingStatus.needsOnboarding,
         currentStep: onboardingStatus.currentStep,
         isNewUser: onboardingStatus.isNewUser,
+        messageType: context.mediaType || "text",
+        hasProcessedContent: !!message && message.length > 0,
       });
 
       if (onboardingStatus.needsOnboarding) {
@@ -373,8 +376,10 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       context.behavioralContext = this._buildBehavioralContext(userMemory);
 
       // Processar com o AgentBase (que já usa o contexto)
-      logger.info(`[Livia] Chamando AgentBase.processMessage para ${normalizedUserId}`);
-      
+      logger.info(
+        `[Livia] Chamando AgentBase.processMessage para ${normalizedUserId}`
+      );
+
       const response = await super.processMessage(
         normalizedUserId,
         message,
@@ -390,10 +395,15 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       });
 
       if (!response || !response.text) {
-        logger.error("[Livia] Resposta do AgentBase está vazia ou inválida:", response);
+        logger.error(
+          "[Livia] Resposta do AgentBase está vazia ou inválida:",
+          response
+        );
         return {
           text: "Desculpe, tive um problema ao processar sua mensagem. Pode repetir?",
-          chunks: ["Desculpe, tive um problema ao processar sua mensagem. Pode repetir?"],
+          chunks: [
+            "Desculpe, tive um problema ao processar sua mensagem. Pode repetir?",
+          ],
           type: "error",
         };
       }
@@ -403,12 +413,14 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         response.chunks || [response.text]
       );
 
-      logger.info(`[Livia] Resposta final preparada: ${response.text.substring(0, 50)}...`);
+      logger.info(
+        `[Livia] Resposta final preparada: ${response.text.substring(0, 50)}...`
+      );
       return response;
     } catch (error) {
       logger.error("[Livia] Erro ao processar mensagem:", error);
       logger.error("[Livia] Stack trace:", error.stack);
-      
+
       // Retornar resposta de erro ao invés de lançar exceção
       return {
         text: "Desculpe, tive um problema técnico. Pode repetir?",
