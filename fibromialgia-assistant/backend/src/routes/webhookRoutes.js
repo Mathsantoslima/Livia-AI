@@ -84,12 +84,25 @@ router.post("/w-api", async (req, res) => {
         body = messageData.msgContent.conversation;
       } else if (messageData.msgContent?.imageMessage?.caption) {
         body = messageData.msgContent.imageMessage.caption;
+      } else if (messageData.msgContent?.audioMessage?.caption) {
+        body = messageData.msgContent.audioMessage.caption;
       } else if (messageData.body) {
         body = messageData.body;
       } else if (messageData.message?.conversation) {
         body = messageData.message.conversation;
       } else if (messageData.message?.text) {
         body = messageData.message.text;
+      }
+
+      // Log detalhado para áudio
+      if (messageData.msgContent?.audioMessage || messageData.type === "audio") {
+        logger.info("[W-API Webhook] ÁUDIO DETECTADO:", {
+          hasAudioMessage: !!messageData.msgContent?.audioMessage,
+          audioUrl: messageData.msgContent?.audioMessage?.url || messageData.audioUrl || messageData.mediaUrl,
+          directPath: messageData.msgContent?.audioMessage?.directPath,
+          type: messageData.type,
+          fullAudioMessage: JSON.stringify(messageData.msgContent?.audioMessage || {}).substring(0, 500),
+        });
       }
 
       const messageId =

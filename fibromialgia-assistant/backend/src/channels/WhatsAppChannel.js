@@ -135,14 +135,43 @@ class WhatsAppChannel {
         }
       }
 
-      // Se não há conteúdo processado, mas há mídia, tentar processar
-      if (!processedContent && mediaType && mediaUrl) {
-        logger.warn(
-          `[WhatsApp] Mídia ${mediaType} não foi processada corretamente. URL: ${mediaUrl}`
+      // VALIDAÇÃO CRÍTICA: Se é áudio mas não foi transcrito, tentar novamente ou avisar
+      if (originalMediaType === "audio" && !processedContent) {
+        logger.error(
+          `[WhatsApp] ERRO CRÍTICO: Áudio recebido mas não foi transcrito! URL: ${mediaUrl}`
         );
-        // Continuar mesmo assim - o agente pode processar o contexto de mídia
+        // Tentar processar novamente se houver URL
+        if (mediaUrl) {
+          try {
+            logger.info(`[WhatsApp] Tentando transcrever áudio novamente: ${mediaUrl}`);
+            const audioResult = await mediaProcessor.processAudio(
+              mediaUrl,
+              extracted.mimeType
+            );
+            processedContent = audioResult.text;
+            mediaContext = {
+              type: "audio",
+              transcription: audioResult.text,
+              language: audioResult.language,
+            };
+            logger.info(
+              `[WhatsApp] Áudio transcrito na segunda tentativa: ${processedContent.substring(0, 50)}...`
+            );
+          } catch (retryError) {
+            logger.error(
+              `[WhatsApp] Falha ao transcrever áudio na segunda tentativa:`,
+              retryError
+            );
+            processedContent =
+              "Recebi seu áudio, mas não consegui transcrevê-lo. Pode repetir ou escrever sua mensagem?";
+          }
+        } else {
+          processedContent =
+            "Recebi um áudio, mas não consegui acessá-lo. Pode repetir ou escrever sua mensagem?";
+        }
       }
 
+      // Se não há conteúdo processado e não há mídia, retornar
       if (!processedContent && !mediaContext) {
         logger.warn(
           "[WhatsApp] Mensagem sem conteúdo processável recebida do WhatsApp"
@@ -150,14 +179,21 @@ class WhatsAppChannel {
         return;
       }
 
+      // Garantir que sempre há conteúdo para processar
+      if (!processedContent) {
+        processedContent = originalMediaType === "audio"
+          ? "[Áudio recebido - aguardando transcrição]"
+          : "[Mídia recebida]";
+      }
+
       logger.info(
-        `[WhatsApp] Conteúdo processado de ${from}: ${processedContent ? processedContent.substring(0, 50) + "..." : "sem texto"} (mídia: ${mediaType || "nenhuma"})`
+        `[WhatsApp] Conteúdo processado de ${from}: ${processedContent.substring(0, 100)}... (mídia: ${originalMediaType || "nenhuma"})`
       );
 
       logger.info(
         `[WhatsApp] Processando mensagem com agente. userId: ${userId}, conteúdo: ${processedContent.substring(
           0,
-          50
+          100
         )}...`
       );
 
@@ -166,7 +202,7 @@ class WhatsAppChannel {
       // Passar tipo de mídia original para que possa responder no mesmo formato
       const response = await this.agent.processMessage(
         userId,
-        processedContent || "[Áudio recebido]", // Garantir que sempre há conteúdo
+        processedContent, // Sempre há conteúdo agora
         {
           channel: "whatsapp",
           messageId,
@@ -334,12 +370,34 @@ class WhatsAppChannel {
         // Áudio
         if (messageData.msgContent.audioMessage) {
           mediaType = "audio";
+          // Tentar diferentes campos possíveis para URL do áudio
           mediaUrl =
             messageData.msgContent.audioMessage.url ||
-            messageData.msgContent.audioMessage.directPath;
+            messageData.msgContent.audioMessage.directPath ||
+            messageData.msgContent.audioMessage.mediaUrl ||
+            messageData.msgContent.audioMessage.media_key?.mediaUrl ||
+            messageData.msgContent.audioMessage.mediaKey?.mediaUrl;
           mimeType =
-            messageData.msgContent.audioMessage.mimetype || "audio/ogg";
+            messageData.msgContent.audioMessage.mimetype || 
+            messageData.msgContent.audioMessage.mimeType ||
+            "audio/ogg";
           body = messageData.msgContent.audioMessage.caption || "";
+          
+          logger.info(`[WhatsApp] Áudio detectado: URL=${mediaUrl || "NÃO ENCONTRADA"}, MIME=${mimeType}`);
+          
+          // Se não encontrou URL, tentar buscar em outros lugares do objeto
+          if (!mediaUrl) {
+            logger.warn("[WhatsApp] URL do áudio não encontrada em msgContent.audioMessage, tentando alternativas...");
+            // Tentar buscar no objeto raiz
+            if (messageData.audioUrl) {
+              mediaUrl = messageData.audioUrl;
+            } else if (messageData.mediaUrl && messageData.type === "audio") {
+              mediaUrl = messageData.mediaUrl;
+            } else if (messageData.url && messageData.type === "audio") {
+              mediaUrl = messageData.url;
+            }
+            logger.info(`[WhatsApp] URL alternativa encontrada: ${mediaUrl || "NENHUMA"}`);
+          }
         }
         // Imagem
         else if (messageData.msgContent.imageMessage) {

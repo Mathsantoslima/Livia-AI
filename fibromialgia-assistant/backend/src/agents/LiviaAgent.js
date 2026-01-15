@@ -188,7 +188,8 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       );
 
       // PRIMEIRO: Verificar se o usuário precisa de onboarding
-      // IMPORTANTE: Verificar mesmo se a mensagem for áudio (processedContent pode estar vazio inicialmente)
+      // IMPORTANTE: Verificar mesmo se a mensagem for áudio
+      // O áudio já foi transcrito antes de chegar aqui, então message contém o texto transcrito
       const onboardingStatus = await userOnboarding.checkOnboardingStatus(
         normalizedUserId
       );
@@ -199,6 +200,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         isNewUser: onboardingStatus.isNewUser,
         messageType: context.mediaType || "text",
         hasProcessedContent: !!message && message.length > 0,
+        messagePreview: message ? message.substring(0, 50) : "vazio",
       });
 
       if (onboardingStatus.needsOnboarding) {

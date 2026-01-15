@@ -29,15 +29,22 @@ class MediaProcessor {
    */
   async processAudio(audioUrl, mimeType = "audio/ogg") {
     try {
-      logger.info(`[MediaProcessor] Processando áudio: ${audioUrl}`);
+      logger.info(`[MediaProcessor] Processando áudio: ${audioUrl}, tipo: ${mimeType}`);
+
+      if (!audioUrl) {
+        throw new Error("URL do áudio não fornecida");
+      }
 
       // Baixar áudio
+      logger.info(`[MediaProcessor] Baixando áudio de: ${audioUrl}`);
       const audioResponse = await axios.get(audioUrl, {
         responseType: "arraybuffer",
-        timeout: 30000,
+        timeout: 60000, // Aumentar timeout para áudios maiores
+        maxContentLength: 50 * 1024 * 1024, // 50MB máximo
       });
 
       const audioBuffer = Buffer.from(audioResponse.data);
+      logger.info(`[MediaProcessor] Áudio baixado: ${audioBuffer.length} bytes`);
 
       // Usar OpenAI Whisper para transcrição (melhor qualidade)
       if (this.openaiApiKey) {
@@ -50,6 +57,8 @@ class MediaProcessor {
           formData.append("model", "whisper-1");
           formData.append("language", "pt"); // Português
 
+          logger.info(`[MediaProcessor] Enviando áudio para OpenAI Whisper (${audioBuffer.length} bytes)`);
+          
           const response = await axios.post(
             "https://api.openai.com/v1/audio/transcriptions",
             formData,
@@ -58,12 +67,16 @@ class MediaProcessor {
                 Authorization: `Bearer ${this.openaiApiKey}`,
                 ...formData.getHeaders(),
               },
-              timeout: 60000,
+              timeout: 120000, // 2 minutos para áudios maiores
+              maxContentLength: 50 * 1024 * 1024,
             }
           );
 
+          const transcription = response.data.text || "";
+          logger.info(`[MediaProcessor] Transcrição concluída: ${transcription.substring(0, 100)}...`);
+
           return {
-            text: response.data.text,
+            text: transcription,
             language: response.data.language || "pt",
             provider: "openai",
           };
