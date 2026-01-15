@@ -117,29 +117,59 @@ class UserOnboarding {
    * Verifica se o perfil está completo
    */
   _isProfileComplete(user) {
-    if (!user) return false;
+    if (!user) {
+      logger.warn("[Onboarding] _isProfileComplete: usuário é null/undefined");
+      return false;
+    }
 
     // Verificar se onboarding foi marcado como completo (prioridade)
     if (user.onboarding_completed === true) {
+      logger.info("[Onboarding] Perfil completo: onboarding_completed = true");
       return true; // Se foi marcado como completo, considerar completo
     }
 
+    // Se onboarding_completed é explicitamente false, não está completo
+    if (user.onboarding_completed === false) {
+      logger.info("[Onboarding] Perfil incompleto: onboarding_completed = false");
+      return false;
+    }
+
     // Verificar campos essenciais
-    const hasName = user.name || user.nickname;
-    const hasBasicInfo = user.age || user.gender;
+    const hasName = !!(user.name || user.nickname);
+    const hasNickname = !!user.nickname;
+    const hasBasicInfo = !!(user.age || user.gender);
 
     // Verificar se tem rotina básica ou hábitos
     const hasRoutine =
       user.daily_routine && Object.keys(user.daily_routine).length > 0;
     const hasHabits = user.habits && Object.keys(user.habits).length > 0;
+    const hasSleepHabits = user.habits?.sleep && Object.keys(user.habits.sleep).length > 0;
+    const hasWorkHabits = user.habits?.work && Object.keys(user.habits.work).length > 0;
+    const hasSymptoms = user.main_symptoms && user.main_symptoms.length > 0;
 
-    // Considerar completo se tem nome e pelo menos rotina ou hábitos básicos
-    // Mas só se onboarding_completed não for explicitamente false
-    return (
-      hasName &&
-      (hasRoutine || hasHabits) &&
-      user.onboarding_completed !== false
-    );
+    logger.info("[Onboarding] Verificando perfil completo:", {
+      hasName,
+      hasNickname,
+      hasBasicInfo,
+      hasRoutine,
+      hasHabits,
+      hasSleepHabits,
+      hasWorkHabits,
+      hasSymptoms,
+      onboardingCompleted: user.onboarding_completed,
+    });
+
+    // Perfil completo precisa ter: nome, nickname, info básica, hábitos (sono E trabalho), rotina E sintomas
+    const isComplete = hasName && 
+                       hasNickname && 
+                       hasBasicInfo && 
+                       hasSleepHabits && 
+                       hasWorkHabits && 
+                       hasRoutine && 
+                       hasSymptoms;
+
+    logger.info(`[Onboarding] Perfil ${isComplete ? "COMPLETO" : "INCOMPLETO"}`);
+    return isComplete;
   }
 
   /**
