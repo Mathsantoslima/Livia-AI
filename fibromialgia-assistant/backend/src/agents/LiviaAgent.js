@@ -22,10 +22,6 @@ const userOnboarding = require("../services/userOnboarding");
 
 class LiviaAgent extends AgentBase {
   constructor(config = {}) {
-    // Cache em memória para rastrear quais usuários já receberam welcome
-    // Isso evita loop mesmo quando há erro de conexão com banco
-    this.welcomeSentCache = new Map(); // Map<phone, timestamp>
-    
     // Configuração específica da Livia
     const liviaConfig = {
       name: "Livia",
@@ -397,7 +393,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           logger.info(
             `[Livia] Iniciando onboarding para usuário ${normalizedUserId}`
           );
-          
+
           // Marcar que welcome foi enviado (adicionar ao cache)
           // IMPORTANTE: Fazer isso ANTES de enviar para evitar race condition
           this._markWelcomeSent(normalizedUserId);
@@ -638,15 +634,13 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
    */
   async _hasPreviousConversation(userId) {
     const normalizedPhone = userId.replace(/[^\d]/g, "");
-    
+
     // PRIMEIRO: Verificar cache em memória (mais rápido e não depende de banco)
     if (this.welcomeSentCache.has(normalizedPhone)) {
-      logger.info(
-        `[Livia] Welcome já foi enviado (cache): ${normalizedPhone}`
-      );
+      logger.info(`[Livia] Welcome já foi enviado (cache): ${normalizedPhone}`);
       return true;
     }
-    
+
     // SEGUNDO: Tentar verificar no banco (pode falhar, mas tenta)
     try {
       // Buscar usuário pelo phone
@@ -655,7 +649,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         .select("id")
         .eq("phone", normalizedPhone)
         .single();
-      
+
       if (user) {
         // Verificar se há mensagens anteriores do assistente
         // O campo pode ser 'sender' ou 'message_type' dependendo da estrutura da tabela
@@ -665,7 +659,7 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
           .eq("user_id", user.id)
           .or("sender.eq.assistant,message_type.eq.assistant")
           .limit(1);
-        
+
         if (messages && messages.length > 0) {
           // Adicionar ao cache para próximas verificações
           this.welcomeSentCache.set(normalizedPhone, Date.now());
@@ -682,11 +676,11 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         error.message
       );
     }
-    
+
     // Se não encontrou no cache nem no banco, assumir que não tem conversa anterior
     return false;
   }
-  
+
   /**
    * Marca que welcome foi enviado para um usuário (adiciona ao cache)
    */
