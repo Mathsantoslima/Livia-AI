@@ -3,13 +3,14 @@
 ## ⚠️ Aviso Encontrado
 
 ```
-Configuration Settings in the current Production deployment differ from 
+Configuration Settings in the current Production deployment differ from
 your current Project Settings.
 ```
 
 ## 📋 O Que Significa
 
 Este aviso indica que há diferenças entre:
+
 - **Configurações no `vercel.json`** (arquivo no código)
 - **Configurações no Dashboard do Vercel** (Settings > General)
 
@@ -20,7 +21,9 @@ O Vercel está informando que as configurações do deployment atual podem ser d
 ## 🔍 Por Que Isso Acontece?
 
 ### **Cenário 1: Configurações no `vercel.json`**
+
 Se você tem `vercel.json` com propriedades como:
+
 - `builds`
 - `routes`
 - `functions`
@@ -29,7 +32,9 @@ Se você tem `vercel.json` com propriedades como:
 Essas configurações **sobrescrevem** as configurações do Dashboard.
 
 ### **Cenário 2: Configurações no Dashboard**
+
 Se você configurou no Dashboard:
+
 - Root Directory
 - Build Command
 - Output Directory
@@ -56,11 +61,13 @@ Mas também tem `vercel.json` com `builds`, então o `vercel.json` tem prioridad
 Mantenha todas as configurações no `vercel.json` e ignore as do Dashboard.
 
 **Vantagens:**
+
 - ✅ Controle de versão (configurações no Git)
 - ✅ Consistência entre ambientes
 - ✅ Fácil de revisar e compartilhar
 
 **Como fazer:**
+
 - Deixe o `vercel.json` como está
 - Ignore as configurações do Dashboard
 - O aviso pode aparecer, mas não é um problema
@@ -72,6 +79,7 @@ Mantenha todas as configurações no `vercel.json` e ignore as do Dashboard.
 Remover `builds` do `vercel.json` e usar apenas o Dashboard.
 
 **Não recomendado porque:**
+
 - ❌ Configurações não ficam versionadas
 - ❌ Difícil de replicar em outros projetos
 - ❌ Pode causar inconsistências
@@ -122,6 +130,7 @@ Seu `vercel.json` atual:
 ### **1. Verificar Configurações no Dashboard**
 
 No Vercel Dashboard:
+
 - **Settings > General**
 - Veja as configurações de:
   - Root Directory
@@ -134,6 +143,7 @@ No Vercel Dashboard:
 Compare as configurações do Dashboard com o que está no `vercel.json`.
 
 **Se forem diferentes:**
+
 - O `vercel.json` tem prioridade
 - O aviso vai aparecer
 - Mas não é um problema se o deploy está funcionando
