@@ -18,6 +18,7 @@ const {
 } = require("../core/tools");
 const { supabase } = require("../config/supabase");
 const logger = require("../utils/logger");
+const userOnboarding = require("../services/userOnboarding");
 
 class LiviaAgent extends AgentBase {
   constructor(config = {}) {
@@ -175,9 +176,97 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
   /**
    * Processa mensagem com lógica adicional da Livia
    * Usa contexto completo do usuário em todas as respostas
+   * PRIMEIRA PRIORIDADE: Verificar se precisa de onboarding
    */
   async processMessage(userId, message, context = {}) {
     try {
+      // PRIMEIRO: Verificar se o usuário precisa de onboarding
+      const onboardingStatus = await userOnboarding.checkOnboardingStatus(userId);
+      
+      if (onboardingStatus.needsOnboarding) {
+        logger.info(`[Livia] Usuário ${userId} precisa de onboarding. Passo: ${onboardingStatus.currentStep}`);
+        
+        // Se é mensagem de onboarding, processar resposta
+        if (context.isOnboardingResponse) {
+          // Atualizar perfil com a resposta
+          await userOnboarding.updateUserProfile(
+            userId,
+            onboardingStatus.currentStep,
+            message
+          );
+          
+          // Verificar próximo passo
+          const nextStatus = await userOnboarding.checkOnboardingStatus(userId);
+          
+          // Salvar resposta do usuário no histórico
+          try {
+            await this._saveOnboardingMessage(userId, message, "user");
+          } catch (saveError) {
+            logger.warn("[Livia] Erro ao salvar resposta de onboarding:", saveError);
+          }
+
+          if (nextStatus.needsOnboarding) {
+            // Ainda há mais perguntas
+            const nextQuestion = userOnboarding.getOnboardingQuestion(
+              nextStatus.currentStep,
+              nextStatus.profile?.name || nextStatus.profile?.nickname
+            );
+            
+            // Salvar próxima pergunta no histórico
+            try {
+              await this._saveOnboardingMessage(userId, nextQuestion, "assistant");
+            } catch (saveError) {
+              logger.warn("[Livia] Erro ao salvar pergunta de onboarding:", saveError);
+            }
+            
+            return {
+              text: nextQuestion,
+              chunks: [nextQuestion],
+              type: "onboarding",
+              onboardingStep: nextStatus.currentStep,
+            };
+          } else {
+            // Onboarding completo
+            await userOnboarding.completeOnboarding(userId);
+            const completionMessage = userOnboarding.getOnboardingQuestion("symptoms");
+            
+            // Salvar mensagem de conclusão no histórico
+            try {
+              await this._saveOnboardingMessage(userId, completionMessage, "assistant");
+            } catch (saveError) {
+              logger.warn("[Livia] Erro ao salvar conclusão de onboarding:", saveError);
+            }
+            
+            return {
+              text: completionMessage,
+              chunks: [completionMessage],
+              type: "onboarding_complete",
+            };
+          }
+        } else {
+          // Primeira mensagem - iniciar onboarding
+          const welcomeMessage = userOnboarding.getOnboardingQuestion(
+            onboardingStatus.currentStep,
+            onboardingStatus.profile?.name || onboardingStatus.profile?.nickname
+          );
+          
+          // Salvar mensagem de onboarding no histórico
+          try {
+            await this._saveOnboardingMessage(userId, welcomeMessage, "assistant");
+          } catch (saveError) {
+            logger.warn("[Livia] Erro ao salvar mensagem de onboarding:", saveError);
+          }
+          
+          return {
+            text: welcomeMessage,
+            chunks: [welcomeMessage],
+            type: "onboarding",
+            onboardingStep: onboardingStatus.currentStep,
+          };
+        }
+      }
+
+      // Usuário já tem perfil completo - processar normalmente
       // Carregar memória completa do usuário
       const userMemory = await this.memoryManager.getUserMemory(userId);
 
@@ -316,6 +405,35 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
       emotionalTendency: profile.emotionalTendency || null,
       copingMechanisms: profile.copingMechanisms || [],
     };
+  }
+
+  /**
+   * Salva mensagem de onboarding no histórico
+   */
+  async _saveOnboardingMessage(userId, content, messageType) {
+    try {
+      // Buscar usuário para obter ID UUID
+      const { data: user } = await supabase
+        .from("users_livia")
+        .select("id")
+        .eq("phone", userId)
+        .single();
+
+      const userUuid = user?.id || null;
+
+      await supabase.from("conversations_livia").insert({
+        user_id: userUuid,
+        phone: userId,
+        content: content,
+        message_type: messageType,
+        sent_at: new Date().toISOString(),
+        metadata: {
+          type: "onboarding",
+        },
+      });
+    } catch (error) {
+      logger.error("[Livia] Erro ao salvar mensagem de onboarding:", error);
+    }
   }
 
   /**

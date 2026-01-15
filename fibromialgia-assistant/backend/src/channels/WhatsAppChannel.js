@@ -137,6 +137,11 @@ class WhatsAppChannel {
         )}...`
       );
 
+      // Verificar se é resposta de onboarding (verificar última mensagem do agente)
+      const userOnboarding = require("../services/userOnboarding");
+      const onboardingStatus = await userOnboarding.checkOnboardingStatus(userId);
+      const isOnboardingResponse = onboardingStatus.needsOnboarding;
+
       // Processar com o agente (incluindo contexto de mídia)
       const response = await this.agent.processMessage(userId, processedContent, {
         channel: "whatsapp",
@@ -145,6 +150,7 @@ class WhatsAppChannel {
         mediaType,
         mediaContext,
         originalBody: body, // Manter texto original se houver
+        isOnboardingResponse: isOnboardingResponse, // Marcar se é resposta de onboarding
       });
 
       // Enviar resposta

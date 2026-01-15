@@ -21,10 +21,15 @@ class PredictiveAnalysis {
    */
   async analyzeDay(userId, targetDate = new Date()) {
     try {
-      // Buscar dados do usuário
+      // Buscar dados do usuário (userId pode ser phone ou id UUID)
       const userData = await this._getUserData(userId);
       if (!userData) {
         return { error: "Usuário não encontrado" };
+      }
+
+      // Verificar se o usuário tem perfil completo (não fazer análise se estiver em onboarding)
+      if (!userData.onboarding_completed) {
+        return { error: "Usuário em onboarding - perfil incompleto" };
       }
 
       // Buscar dados do dia anterior
@@ -78,15 +83,30 @@ class PredictiveAnalysis {
   }
 
   /**
-   * Busca dados do usuário
+   * Busca dados do usuário (userId pode ser phone ou id UUID)
    */
   async _getUserData(userId) {
     try {
-      const { data, error } = await supabase
+      // Tentar primeiro como phone (mais comum)
+      let { data, error } = await supabase
         .from("users_livia")
         .select("*")
-        .eq("id", userId)
+        .eq("phone", userId)
         .single();
+
+      // Se não encontrou como phone, tentar como id UUID
+      if (error && error.code === "PGRST116") {
+        const { data: userById, error: errorById } = await supabase
+          .from("users_livia")
+          .select("*")
+          .eq("id", userId)
+          .single();
+        
+        if (!errorById && userById) {
+          data = userById;
+          error = null;
+        }
+      }
 
       if (error) {
         logger.error("Erro ao buscar dados do usuário:", error);
@@ -110,11 +130,18 @@ class PredictiveAnalysis {
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
-      // Buscar conversas do dia
+      // Buscar usuário para obter ID UUID (se userId for phone)
+      const userData = await this._getUserData(userId);
+      if (!userData) {
+        return { date: date.toISOString().split("T")[0], conversations: [] };
+      }
+      const userUuid = userData.id;
+
+      // Buscar conversas do dia (usar phone ou user_id)
       const { data: conversations } = await supabase
         .from("conversations_livia")
         .select("*")
-        .eq("user_id", userId)
+        .or(`user_id.eq.${userUuid},phone.eq.${userId}`)
         .gte("sent_at", startOfDay.toISOString())
         .lte("sent_at", endOfDay.toISOString())
         .order("sent_at", { ascending: true });

@@ -1,0 +1,416 @@
+/**
+ * =========================================
+ * SERVIÇO DE ONBOARDING E MAPEAMENTO DE PERFIL
+ * =========================================
+ * 
+ * Quando um usuário novo envia mensagem pela primeira vez,
+ * o agente deve mapear e perguntar informações para criar o perfil completo
+ */
+
+const { supabase } = require("../config/supabase");
+const logger = require("../utils/logger");
+
+class UserOnboarding {
+  /**
+   * Verifica se o usuário precisa de onboarding
+   * @param {string} userId - ID do usuário (phone)
+   * @returns {Promise<Object>} { needsOnboarding: boolean, currentStep: string, profile: Object }
+   */
+  async checkOnboardingStatus(userId) {
+    try {
+      // Buscar usuário pelo phone (userId é o phone)
+      const { data: user, error } = await supabase
+        .from("users_livia")
+        .select("*")
+        .eq("phone", userId)
+        .single();
+
+      if (error && error.code === "PGRST116") {
+        // Usuário não existe - precisa criar e fazer onboarding
+        return {
+          needsOnboarding: true,
+          currentStep: "welcome",
+          profile: null,
+          isNewUser: true,
+        };
+      }
+
+      if (error) {
+        logger.error("[Onboarding] Erro ao buscar usuário:", error);
+        return {
+          needsOnboarding: false,
+          currentStep: null,
+          profile: null,
+          error: error.message,
+        };
+      }
+
+      // Verificar se o perfil está completo
+      const profileComplete = this._isProfileComplete(user);
+
+      if (!profileComplete) {
+        // Perfil incompleto - precisa continuar onboarding
+        const currentStep = this._getNextOnboardingStep(user);
+        return {
+          needsOnboarding: true,
+          currentStep: currentStep,
+          profile: user,
+          isNewUser: false,
+        };
+      }
+
+      // Perfil completo
+      return {
+        needsOnboarding: false,
+        currentStep: null,
+        profile: user,
+        isNewUser: false,
+      };
+    } catch (error) {
+      logger.error("[Onboarding] Erro ao verificar status:", error);
+      return {
+        needsOnboarding: false,
+        currentStep: null,
+        profile: null,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Verifica se o perfil está completo
+   */
+  _isProfileComplete(user) {
+    if (!user) return false;
+
+    // Verificar campos essenciais
+    const hasName = user.name || user.nickname;
+    const hasBasicInfo = user.age || user.gender;
+    
+    // Verificar se tem rotina básica ou hábitos
+    const hasRoutine = user.daily_routine && Object.keys(user.daily_routine).length > 0;
+    const hasHabits = user.habits && Object.keys(user.habits).length > 0;
+    
+    // Verificar se onboarding foi marcado como completo
+    const onboardingCompleted = user.onboarding_completed === true;
+
+    // Considerar completo se tem nome e pelo menos rotina ou hábitos básicos
+    return hasName && (hasRoutine || hasHabits) && onboardingCompleted;
+  }
+
+  /**
+   * Determina o próximo passo do onboarding
+   */
+  _getNextOnboardingStep(user) {
+    if (!user.name && !user.nickname) {
+      return "name";
+    }
+    if (!user.age && !user.gender) {
+      return "basic_info";
+    }
+    if (!user.habits || !user.habits.sleep) {
+      return "sleep_habits";
+    }
+    if (!user.habits || !user.habits.work) {
+      return "work_habits";
+    }
+    if (!user.daily_routine || Object.keys(user.daily_routine).length === 0) {
+      return "daily_routine";
+    }
+    if (!user.main_symptoms || user.main_symptoms.length === 0) {
+      return "symptoms";
+    }
+    return "complete";
+  }
+
+  /**
+   * Cria ou atualiza usuário com informações do onboarding
+   */
+  async updateUserProfile(userId, step, answer) {
+    try {
+      // Buscar usuário existente
+      const { data: existingUser } = await supabase
+        .from("users_livia")
+        .select("*")
+        .eq("phone", userId)
+        .single();
+
+      const updateData = {
+        phone: userId,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Processar resposta baseado no passo
+      switch (step) {
+        case "name":
+          if (answer) {
+            // Tentar extrair nome (pode vir como "meu nome é João" ou só "João")
+            const nameMatch = answer.match(/(?:meu nome é|sou|me chamo|eu sou)\s+([A-Za-zÀ-ÿ\s]+)/i);
+            const name = nameMatch ? nameMatch[1].trim() : answer.trim();
+            updateData.name = name;
+            updateData.nickname = name.split(" ")[0]; // Primeiro nome como nickname
+          }
+          break;
+
+        case "basic_info":
+          // Extrair idade e gênero da resposta
+          const ageMatch = answer.match(/(\d+)\s*(?:anos|idade)/i);
+          if (ageMatch) {
+            updateData.age = parseInt(ageMatch[1]);
+          }
+          
+          if (answer.toLowerCase().includes("mulher") || answer.toLowerCase().includes("feminino")) {
+            updateData.gender = "feminino";
+          } else if (answer.toLowerCase().includes("homem") || answer.toLowerCase().includes("masculino")) {
+            updateData.gender = "masculino";
+          } else if (answer.toLowerCase().includes("outro") || answer.toLowerCase().includes("não binário")) {
+            updateData.gender = "outro";
+          }
+          break;
+
+        case "sleep_habits":
+          updateData.habits = existingUser?.habits || {};
+          const sleepData = this._extractSleepInfo(answer);
+          updateData.habits.sleep = { ...updateData.habits.sleep, ...sleepData };
+          break;
+
+        case "work_habits":
+          updateData.habits = existingUser?.habits || {};
+          const workData = this._extractWorkInfo(answer);
+          updateData.habits.work = { ...updateData.habits.work, ...workData };
+          break;
+
+        case "daily_routine":
+          updateData.daily_routine = existingUser?.daily_routine || {};
+          const routineData = this._extractRoutineInfo(answer);
+          updateData.daily_routine = { ...updateData.daily_routine, ...routineData };
+          break;
+
+        case "symptoms":
+          const symptoms = this._extractSymptoms(answer);
+          updateData.main_symptoms = symptoms;
+          break;
+      }
+
+      // Se usuário não existe, criar
+      if (!existingUser) {
+        updateData.created_at = new Date().toISOString();
+        updateData.primeiro_contato = new Date().toISOString();
+        updateData.status = "active";
+        updateData.onboarding_completed = false;
+
+        const { data: newUser, error: createError } = await supabase
+          .from("users_livia")
+          .insert([updateData])
+          .select()
+          .single();
+
+        if (createError) {
+          logger.error("[Onboarding] Erro ao criar usuário:", createError);
+          throw createError;
+        }
+
+        return { success: true, user: newUser };
+      }
+
+      // Atualizar usuário existente
+      const { data: updatedUser, error: updateError } = await supabase
+        .from("users_livia")
+        .update(updateData)
+        .eq("phone", userId)
+        .select()
+        .single();
+
+      if (updateError) {
+        logger.error("[Onboarding] Erro ao atualizar usuário:", updateError);
+        throw updateError;
+      }
+
+      return { success: true, user: updatedUser };
+    } catch (error) {
+      logger.error("[Onboarding] Erro ao atualizar perfil:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Marca onboarding como completo
+   */
+  async completeOnboarding(userId) {
+    try {
+      const { error } = await supabase
+        .from("users_livia")
+        .update({
+          onboarding_completed: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("phone", userId);
+
+      if (error) {
+        logger.error("[Onboarding] Erro ao completar onboarding:", error);
+        throw error;
+      }
+
+      return { success: true };
+    } catch (error) {
+      logger.error("[Onboarding] Erro ao completar onboarding:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gera mensagem de pergunta baseada no passo atual
+   */
+  getOnboardingQuestion(step, userName = null) {
+    const greetings = userName ? `Olá, ${userName}!` : "Olá!";
+    
+    switch (step) {
+      case "welcome":
+        return `${greetings} 😊\n\nSou a Livia, sua assistente para ajudar com fibromialgia.\n\nAntes de começarmos, preciso conhecer você melhor para poder ajudar de forma personalizada.\n\nQual é o seu nome?`;
+
+      case "name":
+        return `${greetings}\n\nPrazer em conhecê-lo(a)! 👋\n\nPara personalizar melhor nossa conversa, me conte:\n- Quantos anos você tem?\n- Qual seu gênero?`;
+
+      case "basic_info":
+        return `Entendi! Obrigada por compartilhar. 💙\n\nAgora, me fale sobre seu sono:\n- Quantas horas você costuma dormir por noite?\n- Como você avalia a qualidade do seu sono? (bom, médio, ruim)`;
+
+      case "sleep_habits":
+        return `Obrigada! 📝\n\nE sobre seu trabalho:\n- Você trabalha? Quantas horas por dia?\n- Como você avalia o nível de estresse no trabalho? (baixo, médio, alto)`;
+
+      case "work_habits":
+        return `Perfeito! ✨\n\nMe conte sobre sua rotina diária:\n- Que horas você costuma acordar e dormir?\n- Você faz alguma atividade física? Qual e com que frequência?`;
+
+      case "daily_routine":
+        return `Ótimo! Já estou conhecendo você melhor. 🎯\n\nPor último, me conte:\n- Quais são os principais sintomas de fibromialgia que você sente? (ex: dor, fadiga, problemas de sono)\n- Há algo que você percebe que piora seus sintomas? (gatilhos)`;
+
+      case "symptoms":
+        return `Perfeito! Agora já tenho um perfil completo sobre você. 🎉\n\nVou usar essas informações para:\n- Entender melhor seus padrões\n- Fazer previsões sobre seus dias\n- Dar sugestões personalizadas\n\nPode me contar como você está se sentindo hoje?`;
+
+      default:
+        return "Obrigada pelas informações! Como posso ajudar você hoje?";
+    }
+  }
+
+  /**
+   * Extrai informações de sono da resposta
+   */
+  _extractSleepInfo(answer) {
+    const info = {};
+    const lowerAnswer = answer.toLowerCase();
+
+    // Horas de sono
+    const hoursMatch = answer.match(/(\d+)\s*(?:h|horas)/i);
+    if (hoursMatch) {
+      info.averageHours = parseInt(hoursMatch[1]);
+    }
+
+    // Qualidade
+    if (lowerAnswer.includes("bom") || lowerAnswer.includes("boa") || lowerAnswer.includes("bem")) {
+      info.quality = "good";
+    } else if (lowerAnswer.includes("ruim") || lowerAnswer.includes("péssimo")) {
+      info.quality = "poor";
+    } else {
+      info.quality = "medium";
+    }
+
+    // Consistência
+    if (lowerAnswer.includes("sempre") || lowerAnswer.includes("todos os dias")) {
+      info.consistency = "high";
+    } else if (lowerAnswer.includes("às vezes") || lowerAnswer.includes("variável")) {
+      info.consistency = "low";
+    } else {
+      info.consistency = "medium";
+    }
+
+    return info;
+  }
+
+  /**
+   * Extrai informações de trabalho da resposta
+   */
+  _extractWorkInfo(answer) {
+    const info = {};
+    const lowerAnswer = answer.toLowerCase();
+
+    // Horas de trabalho
+    const hoursMatch = answer.match(/(\d+)\s*(?:h|horas)/i);
+    if (hoursMatch) {
+      info.hoursPerDay = parseInt(hoursMatch[1]);
+    }
+
+    // Nível de estresse
+    if (lowerAnswer.includes("alto") || lowerAnswer.includes("muito")) {
+      info.stressLevel = "high";
+    } else if (lowerAnswer.includes("baixo") || lowerAnswer.includes("pouco")) {
+      info.stressLevel = "low";
+    } else {
+      info.stressLevel = "medium";
+    }
+
+    // Pausas
+    info.breaks = lowerAnswer.includes("pausa") || lowerAnswer.includes("descanso");
+
+    return info;
+  }
+
+  /**
+   * Extrai informações de rotina da resposta
+   */
+  _extractRoutineInfo(answer) {
+    const routine = {};
+    const lowerAnswer = answer.toLowerCase();
+
+    // Horário de acordar
+    const wakeMatch = answer.match(/(?:acordo|acordar|levanto)\s*(?:às|as)?\s*(\d{1,2})[h:]?(\d{2})?/i);
+    if (wakeMatch) {
+      routine.wakeTime = `${wakeMatch[1].padStart(2, "0")}:${wakeMatch[2] || "00"}`;
+    }
+
+    // Horário de dormir
+    const sleepMatch = answer.match(/(?:durmo|dormir|vou dormir)\s*(?:às|as)?\s*(\d{1,2})[h:]?(\d{2})?/i);
+    if (sleepMatch) {
+      routine.bedtime = `${sleepMatch[1].padStart(2, "0")}:${sleepMatch[2] || "00"}`;
+    }
+
+    // Atividade física
+    if (lowerAnswer.includes("caminhada") || lowerAnswer.includes("caminhar")) {
+      routine.physicalActivity = { type: "walking", frequency: "daily" };
+    } else if (lowerAnswer.includes("academia") || lowerAnswer.includes("ginásio")) {
+      routine.physicalActivity = { type: "gym", frequency: "weekly" };
+    } else if (lowerAnswer.includes("yoga")) {
+      routine.physicalActivity = { type: "yoga", frequency: "weekly" };
+    } else if (lowerAnswer.includes("não") || lowerAnswer.includes("nenhuma")) {
+      routine.physicalActivity = { type: "none", frequency: "rarely" };
+    }
+
+    return routine;
+  }
+
+  /**
+   * Extrai sintomas da resposta
+   */
+  _extractSymptoms(answer) {
+    const symptoms = [];
+    const lowerAnswer = answer.toLowerCase();
+
+    const symptomKeywords = {
+      dor: ["dor", "dói", "dores", "dolorido"],
+      fadiga: ["fadiga", "cansado", "cansaço", "exausto", "sem energia"],
+      sono: ["sono", "insônia", "dormir mal", "sono ruim"],
+      ansiedade: ["ansiedade", "ansioso", "nervoso"],
+      depressão: ["depressão", "deprimido", "triste"],
+      rigidez: ["rigidez", "rígido", "travado"],
+      memória: ["memória", "esquecimento", "esquecer"],
+    };
+
+    Object.entries(symptomKeywords).forEach(([symptom, keywords]) => {
+      if (keywords.some((keyword) => lowerAnswer.includes(keyword))) {
+        symptoms.push(symptom);
+      }
+    });
+
+    return symptoms;
+  }
+}
+
+module.exports = new UserOnboarding();

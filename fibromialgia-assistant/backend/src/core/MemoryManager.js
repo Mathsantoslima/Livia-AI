@@ -30,12 +30,27 @@ class MemoryManager {
         return cached;
       }
 
-      // Buscar do banco
-      const { data: user, error } = await supabase
+      // Buscar do banco (userId pode ser phone ou id UUID)
+      // Tentar primeiro como phone (mais comum)
+      let { data: user, error } = await supabase
         .from("users_livia")
         .select("*")
-        .eq("id", userId)
+        .eq("phone", userId)
         .single();
+
+      // Se não encontrou como phone, tentar como id UUID
+      if (error && error.code === "PGRST116") {
+        const { data: userById, error: errorById } = await supabase
+          .from("users_livia")
+          .select("*")
+          .eq("id", userId)
+          .single();
+        
+        if (!errorById && userById) {
+          user = userById;
+          error = null;
+        }
+      }
 
       if (error && error.code !== "PGRST116") {
         logger.error("Erro ao buscar usuário:", error);
@@ -46,20 +61,23 @@ class MemoryManager {
         return {};
       }
 
+      // Obter ID UUID do usuário (se userId for phone, usar user.id)
+      const userUuid = user.id;
+
       // Buscar padrões do usuário
       const { data: patterns } = await supabase
         .from("user_patterns")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", userUuid)
         .eq("is_active", true)
         .order("confidence", { ascending: false })
         .limit(5);
 
-      // Buscar resumo do histórico (últimas 30 mensagens)
+      // Buscar resumo do histórico (últimas 30 mensagens) - usar phone ou user_id
       const { data: recentMessages } = await supabase
         .from("conversations_livia")
         .select("content, message_type, sent_at")
-        .eq("user_id", userId)
+        .or(`user_id.eq.${userUuid},phone.eq.${user.phone}`)
         .order("sent_at", { ascending: false })
         .limit(30);
 
@@ -112,10 +130,25 @@ class MemoryManager {
    */
   async getConversationContext(userId, limit = 10) {
     try {
+      // Buscar usuário para obter ID UUID (se userId for phone)
+      let userUuid = userId;
+      let userPhone = userId;
+      
+      const { data: user } = await supabase
+        .from("users_livia")
+        .select("id, phone")
+        .or(`id.eq.${userId},phone.eq.${userId}`)
+        .single();
+      
+      if (user) {
+        userUuid = user.id;
+        userPhone = user.phone;
+      }
+
       const { data: messages, error } = await supabase
         .from("conversations_livia")
         .select("content, message_type, sent_at")
-        .eq("user_id", userId)
+        .or(`user_id.eq.${userUuid},phone.eq.${userPhone}`)
         .order("sent_at", { ascending: false })
         .limit(limit);
 
