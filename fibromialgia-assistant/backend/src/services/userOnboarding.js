@@ -54,7 +54,9 @@ class UserOnboarding {
       if (error && error.code !== "PGRST116") {
         // Erro diferente de "não encontrado" - logar mas ainda tentar onboarding
         logger.error("[Onboarding] Erro ao buscar usuário:", error);
-        logger.warn("[Onboarding] Erro não crítico, assumindo que precisa de onboarding");
+        logger.warn(
+          "[Onboarding] Erro não crítico, assumindo que precisa de onboarding"
+        );
         // Se houver erro mas não for "não encontrado", assumir que precisa de onboarding
         return {
           needsOnboarding: true,
@@ -130,7 +132,9 @@ class UserOnboarding {
 
     // Se onboarding_completed é explicitamente false, não está completo
     if (user.onboarding_completed === false) {
-      logger.info("[Onboarding] Perfil incompleto: onboarding_completed = false");
+      logger.info(
+        "[Onboarding] Perfil incompleto: onboarding_completed = false"
+      );
       return false;
     }
 
@@ -143,8 +147,10 @@ class UserOnboarding {
     const hasRoutine =
       user.daily_routine && Object.keys(user.daily_routine).length > 0;
     const hasHabits = user.habits && Object.keys(user.habits).length > 0;
-    const hasSleepHabits = user.habits?.sleep && Object.keys(user.habits.sleep).length > 0;
-    const hasWorkHabits = user.habits?.work && Object.keys(user.habits.work).length > 0;
+    const hasSleepHabits =
+      user.habits?.sleep && Object.keys(user.habits.sleep).length > 0;
+    const hasWorkHabits =
+      user.habits?.work && Object.keys(user.habits.work).length > 0;
     const hasSymptoms = user.main_symptoms && user.main_symptoms.length > 0;
 
     logger.info("[Onboarding] Verificando perfil completo:", {
@@ -160,15 +166,18 @@ class UserOnboarding {
     });
 
     // Perfil completo precisa ter: nome, nickname, info básica, hábitos (sono E trabalho), rotina E sintomas
-    const isComplete = hasName && 
-                       hasNickname && 
-                       hasBasicInfo && 
-                       hasSleepHabits && 
-                       hasWorkHabits && 
-                       hasRoutine && 
-                       hasSymptoms;
+    const isComplete =
+      hasName &&
+      hasNickname &&
+      hasBasicInfo &&
+      hasSleepHabits &&
+      hasWorkHabits &&
+      hasRoutine &&
+      hasSymptoms;
 
-    logger.info(`[Onboarding] Perfil ${isComplete ? "COMPLETO" : "INCOMPLETO"}`);
+    logger.info(
+      `[Onboarding] Perfil ${isComplete ? "COMPLETO" : "INCOMPLETO"}`
+    );
     return isComplete;
   }
 

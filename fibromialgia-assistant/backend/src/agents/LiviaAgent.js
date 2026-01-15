@@ -198,15 +198,27 @@ Você NUNCA diagnostica ou prescreve medicamentos.`,
         needsOnboarding: onboardingStatus.needsOnboarding,
         currentStep: onboardingStatus.currentStep,
         isNewUser: onboardingStatus.isNewUser,
+        hasProfile: !!onboardingStatus.profile,
+        hasError: !!onboardingStatus.error,
         messageType: context.mediaType || "text",
         hasProcessedContent: !!message && message.length > 0,
         messagePreview: message ? message.substring(0, 50) : "vazio",
+        fullStatus: JSON.stringify(onboardingStatus).substring(0, 200),
       });
 
       // FORÇAR ONBOARDING se necessário - garantir que sempre execute
-      const shouldDoOnboarding = onboardingStatus.needsOnboarding || 
+      // CRITICAL: Se não tem perfil OU precisa de onboarding OU houve erro → FORÇAR
+      const shouldDoOnboarding = onboardingStatus.needsOnboarding === true || 
                                  onboardingStatus.error || // Se houve erro, fazer onboarding
-                                 !onboardingStatus.profile; // Se não tem perfil, fazer onboarding
+                                 !onboardingStatus.profile || // Se não tem perfil, fazer onboarding
+                                 onboardingStatus.currentStep; // Se tem passo definido, fazer onboarding
+      
+      logger.info(`[Livia] Deve fazer onboarding? ${shouldDoOnboarding}`, {
+        needsOnboarding: onboardingStatus.needsOnboarding,
+        hasError: !!onboardingStatus.error,
+        hasProfile: !!onboardingStatus.profile,
+        hasStep: !!onboardingStatus.currentStep,
+      });
       
       if (shouldDoOnboarding) {
         logger.info(
