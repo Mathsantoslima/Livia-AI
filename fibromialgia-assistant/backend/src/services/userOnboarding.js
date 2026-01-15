@@ -101,6 +101,14 @@ class UserOnboarding {
               user
             )}, Usando: ${currentStep}`
         );
+        // CRITICAL: Garantir que currentStep nunca seja null/undefined
+        if (!currentStep) {
+          logger.warn(
+            `[Onboarding] currentStep é ${currentStep}, calculando baseado nos dados faltantes`
+          );
+          currentStep = this._getNextOnboardingStep(user);
+        }
+
         // #region agent log
         logger.info(
           `[DEBUG-H1-H2-H3] checkOnboardingStatus RETORNO: currentStep=${currentStep}, onboardingStepDB=${
@@ -131,9 +139,32 @@ class UserOnboarding {
     } catch (error) {
       logger.error("[Onboarding] Erro ao verificar status:", error);
       // Em caso de erro, assumir que precisa de onboarding para segurança
+      // Mas tentar calcular um step baseado no userId (pode ter dados parciais)
+      let fallbackStep = "welcome";
+      try {
+        // Tentar buscar usuário mesmo com erro para calcular step
+        const { data: userData } = await supabase
+          .from("users_livia")
+          .select("name, nickname, onboarding_step")
+          .eq("phone", normalizedPhone)
+          .single();
+
+        if (userData) {
+          fallbackStep =
+            userData.onboarding_step ||
+            this._getNextOnboardingStep(userData) ||
+            "welcome";
+        }
+      } catch (fallbackError) {
+        // Se falhar, usar "welcome" como padrão
+        logger.warn(
+          "[Onboarding] Não foi possível calcular fallback step, usando 'welcome'"
+        );
+      }
+
       return {
         needsOnboarding: true,
-        currentStep: "welcome",
+        currentStep: fallbackStep,
         profile: null,
         error: error.message,
       };
@@ -602,6 +633,38 @@ class UserOnboarding {
       }, stepIsUndefined=${step === undefined}`
     );
     // #endregion
+
+    // CRITICAL: Validar step antes de processar
+    const validSteps = [
+      "welcome",
+      "name",
+      "nickname",
+      "basic_info",
+      "sleep_habits",
+      "work_habits",
+      "daily_routine",
+      "symptoms",
+      "complete",
+    ];
+
+    // Se step é null/undefined ou inválido, calcular baseado no que temos
+    if (!step || !validSteps.includes(step)) {
+      logger.error(
+        `[Onboarding] Step inválido recebido: ${step}. Calculando fallback baseado em userName=${userName}, userNickname=${userNickname}`
+      );
+
+      // Calcular step baseado nos dados disponíveis
+      if (!userName) {
+        step = "name";
+      } else if (!userNickname) {
+        step = "nickname";
+      } else {
+        step = "basic_info";
+      }
+
+      logger.info(`[Onboarding] Step corrigido para: ${step}`);
+    }
+
     // Usar nickname se disponível, senão usar name, senão genérico
     const displayName = userNickname || userName;
     const greetings = displayName ? `${displayName}!` : "";

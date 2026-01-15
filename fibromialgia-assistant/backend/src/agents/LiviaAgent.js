@@ -358,6 +358,20 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
             };
           }
 
+          // CRITICAL: Garantir que currentStep nunca seja null/undefined quando needsOnboarding é true
+          if (nextStatus.needsOnboarding && !nextStatus.currentStep) {
+            logger.error(
+              `[Livia] CRÍTICO: needsOnboarding=true mas currentStep é ${nextStatus.currentStep} para ${normalizedUserId}. Corrigindo.`
+            );
+            // Calcular próximo step baseado no step processado
+            const calculatedNextStep =
+              this._calculateNextStepFromCurrent(stepToProcess);
+            nextStatus.currentStep = calculatedNextStep;
+            logger.info(
+              `[Livia] currentStep corrigido para: ${calculatedNextStep}`
+            );
+          }
+
           // Salvar resposta do usuário no histórico
           try {
             await this._saveOnboardingMessage(
@@ -949,6 +963,30 @@ REGRA DE OURO: O usuário deve SENTIR que você LEMBRA dele. Cada resposta deve 
     });
 
     return optimized.length > 0 ? optimized : chunks;
+  }
+
+  /**
+   * Calcula o próximo step baseado no step atual (fallback quando checkOnboardingStatus falha)
+   */
+  _calculateNextStepFromCurrent(currentStep) {
+    const stepOrder = [
+      "welcome",
+      "name",
+      "nickname",
+      "basic_info",
+      "sleep_habits",
+      "work_habits",
+      "daily_routine",
+      "symptoms",
+      "complete",
+    ];
+
+    const currentIndex = stepOrder.indexOf(currentStep);
+    if (currentIndex === -1 || currentIndex >= stepOrder.length - 1) {
+      return "complete";
+    }
+
+    return stepOrder[currentIndex + 1];
   }
 
   /**
